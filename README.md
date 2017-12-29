@@ -28,3 +28,9 @@ Collect the necessary wrf inputs and observations and run MET based verification
 
 # Workflow
 1. Run `--download_obs` and `download_fcst` to download the required observations and forecasts
+2. Run `--run_obspreprocess` to preprocess the observations, it combines three steps:
+    2.1. `--run_obsproc`: run obsproc
+    2.2. `--run_obs2ascii`: convert the output from `run_obsproc` to ascii format
+    2.3. `--run_ascii2nc`: convert the output from `run_obs2ascii` to netcdf
+3. Run `--run_wrf_interp` to preprocess the forecasts
+4. Run any MET applications

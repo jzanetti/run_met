@@ -4,7 +4,7 @@ from datetime import datetime
 import os
 import shutil
 
-import fcst_processing, obs_processing, met_processing
+from run_met import fcst_processing, obs_processing, met_processing
 
 
 """

@@ -1,7 +1,9 @@
+#!/usr/bin/env python
 
 import argparse
 from datetime import datetime
 import os
+from pkg_resources import resource_filename
 import shutil
 
 from run_met import fcst_processing, obs_processing, met_processing
@@ -20,7 +22,7 @@ from run_met import fcst_processing, obs_processing, met_processing
    ---------------------------------------                          
    - observation preprocessing
    ---------------------------------------
-    * little_r/all.little_r.2017121802                : downloaded observation (in little_r)
+    * little_r/all.little_r.2017-12-18_02             : downloaded observation (in little_r)
     * obsproc/obs_gts_2017-12-18_02:00:00.3DVAR       : obs processed by obsproc (hourly data)
     * obs_ascii/obs_ascii                             : obs written in ascii for MET
     * ascii2nc/obs_ascii.nc                           : obs written in netcdf
@@ -105,7 +107,9 @@ def setup_parser():
                         required=False, default=os.getcwd(), help='working dir')
     PARSER.add_argument('--new_run', dest = 'new_run', default=False, 
                         help="delete the old data and create a new run",action='store_true')
-    
+    PARSER.add_argument('--model', type=str, default='nz8kmN-NCEP', help="model name")
+    PARSER.add_argument('--domain_id', type=str, default='2', help="domain ID")
+
     # -----------------
     # download data from s3/ddb (download_obs, download_fcst)
     # -----------------
@@ -113,7 +117,10 @@ def setup_parser():
                         help="download observation in little_r",action='store_true')
     PARSER.add_argument('--download_fcst', dest = 'download_fcst', default=False, 
                         help="download wrfout from S3",action='store_true')
-   
+    PARSER.add_argument('--download_fcst_source', dest = 'download_fcst_source', 
+                        default='s3://metservice-research-us-west-2/research/internal-data/wrf/wrfout', 
+                        help="download wrfout from S3")
+    
     # -----------------
     # run observation preprocessing (obsproc => obs2ascii => ascii2nc)
     # -----------------
@@ -137,8 +144,6 @@ def setup_parser():
     # -----------------
     PARSER.add_argument('--run_wrf_interp', dest = 'run_wrf_interp', default=False, 
                         help="run wrf_interp",action='store_true')
-    PARSER.add_argument('--model', type=str, default=None, help="model name")
-    PARSER.add_argument('--domain_id', type=str, default='2', help="domain ID")
 
     # -----------------------
     # pointstat
@@ -161,17 +166,29 @@ def main():
         args.run_obsproc = args.run_obs2ascii \
              = args.run_ascii2nc = True
     
-    
     # ----------------------------------------------
     # 1. Process observations
     # ----------------------------------------------
     # 1.1: download little_r
     if args.download_obs:
-        print 'download_obs has not been implemented yet'
+        obs_processing.download_obs(args, dir_dict['little_r_dir'])
     
     # 1.2: run obsproc
     if args.run_obsproc:
-        print 'run_obsproc has not been implemented yet' 
+        # 1.2.1 check if model name is provided
+        if not args.model:
+            raise Exception('model name is required for run_obsproc, use --model')
+        
+        # 1.2.2 check if the model config is provided (according to the model name)
+        fcst_config_path = \
+            resource_filename('run_met', 
+                              '../../../../run_met/etc/{}.yaml'.format(args.model))
+        if not os.path.exists(fcst_config_path):
+            raise Exception(fcst_config_path + ' does not exist')
+        
+        # 1.2.3 run obsproc
+        obs_processing.run_obsproc(args, fcst_config_path, 
+                                   dir_dict['little_r_dir'], dir_dict['obsproc_dir'])
     
     # 1.3: convert output from obsproc to the ascii format that required by ascii2nc (met)
     if args.run_obs2ascii:
@@ -190,7 +207,7 @@ def main():
     # ----------------------------------------------
     # 2.1: download forecast
     if args.download_fcst:
-        print 'download_fcst has not been implemented yet'
+        fcst_processing.download_fcst(args, dir_dict['fcst_dir'])
     
     # 2.2: run wrf_interp
     if args.run_wrf_interp:

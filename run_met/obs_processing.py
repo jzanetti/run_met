@@ -1,5 +1,70 @@
-import os
 from datetime import datetime, timedelta
+
+import os
+import subprocess
+import shutil
+
+def download_obs(args, little_r_dir):
+    """run obs2liitle_r to download obs in the little_r format
+        * AWS status and region are fixed to 'research' and 'us-west-2'
+        * NZ domain is fixed to -38.0 -34.0 -172.0 -176.0
+    """
+    start_obs_datetime = args.start_analysis_time + timedelta(seconds = int(args.forecast_length)*3600)
+    end_obs_datetime = args.end_analysis_time + timedelta(seconds = int(args.forecast_length)*3600)
+    cutoff_obs_datetime = end_obs_datetime + timedelta(seconds = 3*3600)
+    # fix the download status and region to research and us-west-2
+    status = 'research'
+    region = 'us-west-2'
+    
+    # -38.0 -34.0 -172.0 -176.0 is the obs domain covering NZ
+    obs2little_r_cmd = 'obs2little_r {} {} {} -38.0 -34.0 -172.0 -176.0 1 --to {} \
+                    --cutoff-time {} --num_threads 8'.format(status, region, 
+                                            start_obs_datetime.strftime('%Y%m%d%H%M'),
+                                            end_obs_datetime.strftime('%Y%m%d%H%M'),
+                                            cutoff_obs_datetime.strftime('%Y%m%d%H%M'))
+    
+    p1 = subprocess.Popen(obs2little_r_cmd, cwd=little_r_dir, shell=True)
+    p1.wait()
+
+
+def run_obsproc(args, fcst_config_path,
+                little_r_dir, obsproc_dir):
+    """run obsproc"""
+    cur_obs_datetime = args.start_analysis_time + timedelta(seconds = int(args.forecast_length)*3600)
+    while cur_obs_datetime <= args.end_analysis_time + timedelta(seconds = int(args.forecast_length)*3600):
+        time_analysis = cur_obs_datetime.strftime('%Y%m%d%H%M')
+        time_window_min = (cur_obs_datetime - timedelta(seconds = 0.5*3600)).strftime('%Y%m%d%H%M')
+        time_window_max = (cur_obs_datetime + timedelta(seconds = 0.5*3600)).strftime('%Y%m%d%H%M')
+        working_dir = os.path.join(obsproc_dir, 'tmp', time_analysis)
+        
+        if os.path.exists(working_dir):
+            shutil.rmtree(working_dir)
+        os.makedirs(working_dir)
+        
+        domain_id = args.domain_id
+        obs_gts_filename = '{}/all.little_r:{}'.format(little_r_dir, cur_obs_datetime.strftime('%Y-%m-%d_%H'))
+        obs_err_filename = args.obsproc_installation + '/obserr.txt'
+        wrf_config = fcst_config_path
+        prepbufr_table = args.obsproc_installation + '/prepbufr_table_filename'
+        
+        obsproc_cmd = 'var_prep {} {} {} {} {} {} {} {} {} {}'.format(time_analysis, 
+                                                    time_window_min, time_window_max,
+                                                    working_dir, 
+                                                    domain_id, obs_gts_filename, obs_err_filename,
+                                                    wrf_config,
+                                                    os.path.join(args.obsproc_installation, 'obsproc.exe'),
+                                                    prepbufr_table)
+
+        p1 = subprocess.Popen(obsproc_cmd, cwd=args.work_dir, shell=True)
+        p1.wait()
+        
+        os.symlink(os.path.join(working_dir, 'obs_gts_{}.3DVAR'.format(
+            cur_obs_datetime.strftime('%Y-%m-%d_%H:%M:%S'))), 
+                   os.path.join(obsproc_dir, 'obs_gts_{}.3DVAR'.format(
+            cur_obs_datetime.strftime('%Y-%m-%d_%H:%M:%S'))))
+        
+        cur_obs_datetime = cur_obs_datetime + timedelta(seconds = 3600)
+        
 
 def ascii2nc(obsproc_dir, ascii2nc_dir,
                  met_installation, ascii2nc_config):

@@ -14,8 +14,11 @@ build:
 requirements:
   build:
     - python
-    - setuptools
   run:
+    - python
+    - ampsaws
+    - obs2r
+    - jpeg ==8d
     - yaml
 
 about:

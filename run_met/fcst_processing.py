@@ -3,6 +3,41 @@ import os
 import subprocess
 from glob import glob
 
+from AMPSAws import resources
+
+rinstance=resources.running_on_ec2()
+
+def download_fcst(args, fcst_dir):
+    """download fcst files into $fcst_dir/$cur_analysis_time/wrf_hourly*
+    """
+    if not rinstance:
+        raise Exception('download_fcst must be run in the EC2 box')
+
+    cur_analysis_time = args.start_analysis_time
+
+    while cur_analysis_time <= args.end_analysis_time:
+        cur_local_fcst_dir = \
+            os.path.join(fcst_dir, cur_analysis_time.strftime('%Y%m%d%H'))
+        cur_remote_fcst_dir = os.path.join(
+            args.download_fcst_source, args.model,
+            cur_analysis_time.strftime('%y/%m/%d/%H'))
+        for fcst_h in range(1, int(args.forecast_length)+1):
+            cur_valid_t = cur_analysis_time + timedelta(seconds = fcst_h*3600)
+            cur_remote_fcst_filename = \
+                'wrf_hourly_{}_d0{}_{}'.format(
+                    args.model, args.domain_id,
+                    cur_valid_t.strftime('%Y-%m-%d_%H:00:00')
+                    )
+            cur_remote_fcst_path = os.path.join(cur_remote_fcst_dir,
+                                                cur_remote_fcst_filename)
+            cur_local_fcst_path = os.path.join(cur_local_fcst_dir,
+                                               cur_remote_fcst_filename)
+            resources.copy(cur_remote_fcst_path, cur_local_fcst_path)
+
+        cur_analysis_time = cur_analysis_time + \
+                timedelta(seconds = 3600*int(args.analysis_time_interval))
+
+
 def wrf_interp_namelist(path_to_input, path_to_output,
                         root_name, grid_id,
                         start_date,

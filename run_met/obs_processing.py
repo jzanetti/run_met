@@ -110,6 +110,8 @@ def obsproc2ascii(obs_ascii_dir, obsproc_data, processed_list):
     for cobstype in obs_field:
         cobs_gribcode = obs_gribcode[cobstype]
         for cdata in obsproc_data:
+            if not (cdata['obs_platform'] in obs_height.keys()):
+                continue
             cobs_height = obs_height[cdata['obs_platform']][cobstype]
             cobs_type = obs_type[cdata['obs_platform']]
                                  

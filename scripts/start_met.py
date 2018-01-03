@@ -10,7 +10,13 @@ from run_met import fcst_processing, obs_processing, met_processing
 
 
 """
-    run_met directories structure
+    1. Synopsis:
+        Run MET verification using:
+            * wrfout from S3
+            * observations from DDB
+        Note: only ADPSFC (FM-12) data is supported
+        
+    2. start_met directories structure
    ---------------------------------------
    - forecast preprocessing
    ---------------------------------------
@@ -99,7 +105,9 @@ def setup_parser():
                         required=True, help="wrf_interp installation")
     PARSER.add_argument('--met_installation', type=str, 
                         required=True, help="met installation")
-
+    PARSER.add_argument('--model', type=str, default='nz8kmN-NCEP', 
+                        required=True, help="model name")
+    
     # -----------------
     # optional
     # -----------------
@@ -107,7 +115,6 @@ def setup_parser():
                         required=False, default=os.getcwd(), help='working dir')
     PARSER.add_argument('--new_run', dest = 'new_run', default=False, 
                         help="delete the old data and create a new run",action='store_true')
-    PARSER.add_argument('--model', type=str, default='nz8kmN-NCEP', help="model name")
     PARSER.add_argument('--domain_id', type=str, default='2', help="domain ID")
 
     # -----------------
@@ -119,7 +126,8 @@ def setup_parser():
                         help="download wrfout from S3",action='store_true')
     PARSER.add_argument('--download_fcst_source', dest = 'download_fcst_source', 
                         default='s3://metservice-research-us-west-2/research/internal-data/wrf/wrfout', 
-                        help="download wrfout from S3")
+                        help="download wrfout from S3 \
+                        [s3://metservice-research-us-west-2/research/internal-data/wrf/wrfout]")
     
     # -----------------
     # run observation preprocessing (obsproc => obs2ascii => ascii2nc)

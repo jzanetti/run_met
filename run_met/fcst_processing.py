@@ -18,9 +18,18 @@ def download_fcst(args, fcst_dir):
     while cur_analysis_time <= args.end_analysis_time:
         cur_local_fcst_dir = \
             os.path.join(fcst_dir, cur_analysis_time.strftime('%Y%m%d%H'))
-        cur_remote_fcst_dir = os.path.join(
-            args.download_fcst_source, args.model,
-            cur_analysis_time.strftime('%y/%m/%d/%H'))
+        
+        if args.download_fcst_source == 'archive':
+            archive_dir = 's3://metservice-research-us-west-2/research/archive-data/wrf_archive/wrfout'
+            cur_remote_fcst_dir = os.path.join(
+                archive_dir, args.model,
+                cur_analysis_time.strftime('%y/%m/%d/%H'))
+        if args.download_fcst_source == 'internal':
+            internal_dir = 's3://metservice-research-us-west-2/research/internal-data/wrf/output'
+            cur_remote_fcst_dir = os.path.join(
+                internal_dir, cur_analysis_time.strftime('%Y%m%d%H'), args.model,
+                args.download_fcst_unique_id)          
+        
         for fcst_h in range(1, int(args.forecast_length)+1):
             cur_valid_t = cur_analysis_time + timedelta(seconds = fcst_h*3600)
             cur_remote_fcst_filename = \

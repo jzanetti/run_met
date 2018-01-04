@@ -23,7 +23,7 @@ def main():
         maintainer_email='research@metservice.com',
         name='run_met',
         version=__version__,
-        scripts=['scripts/start_met.py'],
+        scripts=['scripts/start_met.py', 'scripts/start_multiple_met.py', 'scripts/start_plot.py'],
         packages=['run_met'],
         zip_safe=False,
         ext_modules=[],

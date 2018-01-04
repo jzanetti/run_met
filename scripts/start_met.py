@@ -125,10 +125,14 @@ def setup_parser():
     PARSER.add_argument('--download_fcst', dest = 'download_fcst', default=False, 
                         help="download wrfout from S3",action='store_true')
     PARSER.add_argument('--download_fcst_source', dest = 'download_fcst_source', 
-                        default='s3://metservice-research-us-west-2/research/internal-data/wrf/wrfout', 
-                        help="download wrfout from S3 \
-                        [s3://metservice-research-us-west-2/research/internal-data/wrf/wrfout]")
-    
+                        default='internal', 
+                        help="choose from internal or archive")
+    PARSER.add_argument('--download_fcst_unique_id', 
+                        dest = 'download_fcst_unique_id', 
+                        default='12345', 
+                        help="unique_id required by data download from internal")
+
+
     # -----------------
     # run observation preprocessing (obsproc => obs2ascii => ascii2nc)
     # -----------------

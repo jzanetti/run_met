@@ -57,14 +57,14 @@ export met_installation=/opt/miniconda2/envs/met/met
 start_met.py --start_analysis 201712180100 --end_analysis 201712180200 --forecast_length 1 --analysis_time_interval 1 --new_run --obsproc_installation $obsproc_installation --wrf_interp_installation $wrf_interp_installation --met_installation $met_installation --work_dir $work_dir --model $model --domain_id $domain_id --download_obs --download_fcst --run_obspreprocess --run_wrf_interp --run_pointstat --ascii2nc_config $ascii2nc_config --download_fcst_source $download_fcst_source --pointstat_config $pointstat_config
 ```
 
-#start_multiple_met.py
+# start_multiple_met.py
 You need to edit the script start_multiple_met.py directly to control the multi models verifications
 Location of ```start_multiple_met.py```
 ```
 /opt/miniconda2/envs/met/bin/start_multiple_met.py
 ```
 
-#start_plot.py
+# start_plot.py
 ## Sample run command for start_plot.py
 ```
 start_plot.py --start_analysis_time 201712250000 --end_analysis_time 201712250000 --forecast_length 6 --analysis_time_interval 1 --model_list nz8kmN-NCEP nz8kmN-NCEP-obsnudge --met_task point_stat --met_out_dir /home/szhang/Desktop/run_ver/met --plot_field_list T2

@@ -15,6 +15,7 @@ requirements:
   build:
     - python
   run:
+    - qt==4.8.7
     - python
     - ampsaws
     - obs2r

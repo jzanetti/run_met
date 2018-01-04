@@ -79,7 +79,8 @@ def obsproc2ascii(obs_ascii_dir, obsproc_data, processed_list):
     obs_field = ['obs_temp', 'obs_speed', 'obs_direction', 'obs_dewp', 'obs_humidity']
     
     obs_type = {
-        'FM-12': 'ADPSFC'
+        'FM-12': 'ADPSFC',
+        'FM-15': 'ADPSFC'
         }
     
     obs_height = {
@@ -87,7 +88,12 @@ def obsproc2ascii(obs_ascii_dir, obsproc_data, processed_list):
                   'obs_humidity': 2.0,
                   'obs_dewp': 2.0,
                   'obs_speed': 10.0,
-                  'obs_direction': 10.0}
+                  'obs_direction': 10.0},
+        'FM-15': {'obs_temp': 2.0,
+                  'obs_humidity': 2.0,
+                  'obs_dewp': 2.0,
+                  'obs_speed': 10.0,
+                  'obs_direction': 10.0},
         }
     
     # https://rda.ucar.edu/docs/formats/grib/gribdoc/params.html

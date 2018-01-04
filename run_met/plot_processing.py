@@ -1,7 +1,9 @@
 from datetime import datetime, timedelta
 import numpy
 import matplotlib.pyplot as plt
+plt.switch_backend('agg')
 import os
+
 
 # configure the plot
 task_list = {
@@ -221,7 +223,7 @@ def plot_score(args, stats_output):
             plt.title(task_list[cur_score]['score_name'])
             plt.grid()
             plt.legend()
-            xtick_number = int(max(round(len(score_value_list)/10), 1.0))
+            xtick_number = int(max(round(len(score_value_list)/6), 1.0))
             plt.xticks(range(0, len(score_value_list), xtick_number), x_axis_label[0:-1:xtick_number])
             plt.ylabel('skill score')
             plt.savefig(fig_filename, bbox_inches='tight')

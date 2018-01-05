@@ -9,7 +9,7 @@ def download_obs(args, little_r_dir):
         * AWS status and region are fixed to 'research' and 'us-west-2'
         * NZ domain is fixed to -38.0 -34.0 -172.0 -176.0
     """
-    start_obs_datetime = args.start_analysis_time + timedelta(seconds = int(args.forecast_length)*3600)
+    start_obs_datetime = args.start_analysis_time + timedelta(seconds = 3600)
     end_obs_datetime = args.end_analysis_time + timedelta(seconds = int(args.forecast_length)*3600)
     cutoff_obs_datetime = end_obs_datetime + timedelta(seconds = 3*3600)
     # fix the download status and region to research and us-west-2
@@ -30,7 +30,7 @@ def download_obs(args, little_r_dir):
 def run_obsproc(args, fcst_config_path,
                 little_r_dir, obsproc_dir):
     """run obsproc"""
-    cur_obs_datetime = args.start_analysis_time + timedelta(seconds = int(args.forecast_length)*3600)
+    cur_obs_datetime = args.start_analysis_time + timedelta(seconds = 3600)
     while cur_obs_datetime <= args.end_analysis_time + timedelta(seconds = int(args.forecast_length)*3600):
         time_analysis = cur_obs_datetime.strftime('%Y%m%d%H%M')
         time_window_min = (cur_obs_datetime - timedelta(seconds = 0.5*3600)).strftime('%Y%m%d%H%M')

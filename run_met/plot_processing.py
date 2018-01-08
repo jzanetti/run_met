@@ -215,7 +215,8 @@ def plot_score(args, stats_output):
                         
                         x_axis_label.append(cur_valid_time.strftime('%m%dT%H'))
                     
-                    plt.plot(score_value_list, label='{}:{}'.format(cur_model, cur_analysis_time_str))
+                    if len(score_value_list) > 1:
+                        plt.plot(score_value_list, label='{}:{}'.format(cur_model, cur_analysis_time_str))
                     
                     cur_analysis_time = cur_analysis_time + \
                         timedelta(seconds = 3600*int(args.analysis_time_interval))

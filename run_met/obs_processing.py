@@ -104,15 +104,16 @@ def obsproc2ascii(obs_ascii_dir, obsproc_data, processed_list):
                   'obs_v': 10.0},
         }
     
-    # https://rda.ucar.edu/docs/formats/grib/gribdoc/params.html
+    # https://rda.ucar.edu/docs/formats/grib/gribdoc/params.html (Note that it 
+    #    is be different to the one in MET)
     obs_gribcode = {
         'obs_temp': 11,
         'obs_humidity': 52,
         'obs_dewp': 17,
         'obs_speed': 32,
         'obs_direction': 31,
-        'obs_u': 49,
-        'obs_v':50,
+        'obs_u': 33,
+        'obs_v':34,
         }
 
     f_obs_ascii_log = open(os.path.join(obs_ascii_dir, "obs_ascii_log"), "w")

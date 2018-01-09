@@ -4,6 +4,9 @@ import os
 import subprocess
 import shutil
 
+import math
+import numpy
+
 def download_obs(args, little_r_dir):
     """run obs2liitle_r to download obs in the little_r format
         * AWS status and region are fixed to 'research' and 'us-west-2'
@@ -76,7 +79,8 @@ def ascii2nc(obsproc_dir, ascii2nc_dir,
 
 def obsproc2ascii(obs_ascii_dir, obsproc_data, processed_list):
     """all output from obsproc is written in one ascii file""" 
-    obs_field = ['obs_temp', 'obs_speed', 'obs_direction', 'obs_dewp', 'obs_humidity']
+    obs_field = ['obs_temp', 'obs_speed', 'obs_direction', 'obs_u', 
+                 'obs_v', 'obs_dewp', 'obs_humidity']
     
     obs_type = {
         'FM-12': 'ADPSFC',
@@ -88,12 +92,16 @@ def obsproc2ascii(obs_ascii_dir, obsproc_data, processed_list):
                   'obs_humidity': 2.0,
                   'obs_dewp': 2.0,
                   'obs_speed': 10.0,
-                  'obs_direction': 10.0},
+                  'obs_direction': 10.0,
+                  'obs_u': 10.0,
+                  'obs_v': 10.0},
         'FM-15': {'obs_temp': 2.0,
                   'obs_humidity': 2.0,
                   'obs_dewp': 2.0,
                   'obs_speed': 10.0,
-                  'obs_direction': 10.0},
+                  'obs_direction': 10.0,
+                  'obs_u': 10.0,
+                  'obs_v': 10.0},
         }
     
     # https://rda.ucar.edu/docs/formats/grib/gribdoc/params.html
@@ -102,7 +110,9 @@ def obsproc2ascii(obs_ascii_dir, obsproc_data, processed_list):
         'obs_humidity': 52,
         'obs_dewp': 17,
         'obs_speed': 32,
-        'obs_direction': 31
+        'obs_direction': 31,
+        'obs_u': 49,
+        'obs_v':50,
         }
 
     f_obs_ascii_log = open(os.path.join(obs_ascii_dir, "obs_ascii_log"), "w")
@@ -140,6 +150,7 @@ def obsproc2ascii(obs_ascii_dir, obsproc_data, processed_list):
                 level, height, qc_string, obs_value)
             
             f_obs_ascii.write(point_obs_line)
+            
     
     f_obs_ascii.close()
         
@@ -184,6 +195,14 @@ def get_obsproc_obs(args, obsproc_dir):
                                 obs_temp = filtered_line[12]
                                 obs_dewp = filtered_line[15]
                                 obs_humidity = filtered_line[18]
+                                
+                                # derive U and V from spd and dir
+                                if obs_speed != '-888888.000' and  obs_direction != '-888888.000':
+                                    obs_u = str(-1.0*float(obs_speed)*math.sin(numpy.deg2rad(float(obs_direction))));
+                                    obs_v = str(-1.0*float(obs_speed)*math.cos(numpy.deg2rad(float(obs_direction))));
+                                else:
+                                    obs_u = obs_v = '-888888.000'
+                                    
                                 cobs_dict = {
                                     'obs_platform': obs_platform,
                                     'obs_datetime': obs_datetime,
@@ -193,6 +212,8 @@ def get_obsproc_obs(args, obsproc_dir):
                                     'obs_pressure': obs_pressure,
                                     'obs_speed': obs_speed,
                                     'obs_direction': obs_direction,
+                                    'obs_u': obs_u,
+                                    'obs_v': obs_v,
                                     'obs_height': obs_height,
                                     'obs_temp': obs_temp,
                                     'obs_dewp': obs_dewp,

@@ -17,7 +17,7 @@ def run_pointstat(args, dir_dict, pointstat_config):
     cur_analysis_time = args.start_analysis_time
     
     while cur_analysis_time <= args.end_analysis_time:
-        cur_analysis_dir = os.path.join(dir_dict['fcst_dir'],
+        cur_analysis_dir = os.path.join(dir_dict['wrf_interp_dir'],
                                         cur_analysis_time.strftime('%Y%m%d%H'))
         cur_fcst_filename_list = glob(cur_analysis_dir + '/*')
         

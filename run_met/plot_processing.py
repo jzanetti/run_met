@@ -195,37 +195,50 @@ def extract_value_from_stats_output(stats_output, cur_score, cur_model, cur_vali
 def plot_score(args, stats_output):
     """plot the skill score from stats_output"""
     x_axis_label = []
+    is_all_nan = lambda L: not len(filter(lambda e: not e is numpy.nan, L))
+
+    fig_width = 10
+    fig_hight = 8
+
+    cur_valid_time = args.start_analysis_time + timedelta(seconds=3600)
+    while cur_valid_time <= args.end_analysis_time + timedelta(seconds=int(args.forecast_length)*3600):
+        x_axis_label.append(cur_valid_time.strftime('%Y%m%d%H'))
+        cur_valid_time = cur_valid_time + timedelta(seconds = 3600)
+
     for cur_plot_field in args.plot_field_list:
         for cur_score in task_list.keys():
             fig_filename = cur_plot_field + '_' + task_list[cur_score]['score_name'] + '.png'
-
+            plt.figure(figsize=(fig_width, fig_hight))
             for cur_model in args.model_list:
                 cur_analysis_time = args.start_analysis_time
                 while cur_analysis_time <= args.end_analysis_time:
                     score_value_list = []
-                    cur_analysis_time_str = cur_analysis_time.strftime('%Y%m%d%H') 
+                    valid_x_index = []
+                    cur_analysis_time_str = cur_analysis_time.strftime('%Y%m%d%H')
                     for cur_lead_h in range(1, int(args.forecast_length)+1):
                         cur_valid_time = cur_analysis_time + timedelta(seconds=cur_lead_h*3600)
-                        cur_valid_time_str = cur_valid_time.strftime('%Y%m%d%H') 
-                        
-                        score_value = extract_value_from_stats_output(stats_output, cur_score, cur_model, 
+                        cur_valid_time_str = cur_valid_time.strftime('%Y%m%d%H')
+
+                        cur_valid_x_index = x_axis_label.index(cur_valid_time_str)
+                        valid_x_index.append(cur_valid_x_index)
+
+                        score_value = extract_value_from_stats_output(stats_output, cur_score, cur_model,
                                                                       cur_valid_time_str, cur_analysis_time_str,
                                                                       cur_plot_field)
                         score_value_list.append(score_value)
-                        
-                        x_axis_label.append(cur_valid_time.strftime('%m%dT%H'))
-                    
-                    if len(score_value_list) > 1:
-                        plt.plot(score_value_list, label='{}:{}'.format(cur_model, cur_analysis_time_str))
-                    
+
+                    if not is_all_nan(score_value_list):
+                        plt.plot(valid_x_index, score_value_list, label='{}\n{}'.format(cur_model, cur_analysis_time_str))
+
                     cur_analysis_time = cur_analysis_time + \
                         timedelta(seconds = 3600*int(args.analysis_time_interval))
-            
-            plt.title(task_list[cur_score]['score_name'])
+
+            plt.suptitle(task_list[cur_score]['score_name'])
             plt.grid()
-            plt.legend()
+            plt.legend(loc='upper left',bbox_to_anchor=(1,0.5), fontsize = 'small')
             xtick_number = int(max(round(len(score_value_list)/6), 1.0))
             plt.xticks(range(0, len(score_value_list), xtick_number), x_axis_label[0:-1:xtick_number])
             plt.ylabel('skill score')
             plt.savefig(fig_filename, bbox_inches='tight')
             plt.close()
+

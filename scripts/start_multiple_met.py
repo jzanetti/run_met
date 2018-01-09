@@ -17,20 +17,24 @@ general_config = {
 
 multi_met_config = {
     'start_analysis': ['201712250000', 
-                       '201712250000'],
+                       '201712250000',
+                       '201712250100'],
     'end_analysis': ['201712250000', 
-                     '201712250000'],
-    'forecast_length': [6, 6],
-    'analysis_time_interval': [1, 1],
-    'model': ['nz8kmN-NCEP', 'nz8kmN-NCEP-obsnudge'],
-    'domain_id': [2, 2],
+                     '201712250000','201712250100'],
+    'forecast_length': [12, 12, 12],
+    'analysis_time_interval': [1, 1, 1],
+    'model': ['nz8kmN-NCEP', 'nz8kmN-NCEP-obsnudge', 'nz8kmN-NCEP-var'],
+    'domain_id': [2, 2, 2],
     'download_fcst_source':[
+        'internal',
         'internal',
         'internal'],
     'ascii2nc_config': [
         '/opt/miniconda2/envs/met/lib/python2.7/site-packages/run_met/../../../../run_met/etc/ascii2nc.config',
+        '/opt/miniconda2/envs/met/lib/python2.7/site-packages/run_met/../../../../run_met/etc/ascii2nc.config',
         '/opt/miniconda2/envs/met/lib/python2.7/site-packages/run_met/../../../../run_met/etc/ascii2nc.config'],
     'pointstat_config':[
+        '/opt/miniconda2/envs/met/lib/python2.7/site-packages/run_met/../../../../run_met/etc/pointstat.config',
         '/opt/miniconda2/envs/met/lib/python2.7/site-packages/run_met/../../../../run_met/etc/pointstat.config',
         '/opt/miniconda2/envs/met/lib/python2.7/site-packages/run_met/../../../../run_met/etc/pointstat.config'
         ],

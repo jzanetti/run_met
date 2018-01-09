@@ -52,6 +52,17 @@ from run_met import fcst_processing, obs_processing, met_processing
                               '--run_wrf_interp', '--model', 'nz8kmN-NCEP', '--domain_id', '2',
                               '--run_pointstat', '--pointstat_config', '/home/jzanetti/workspace/run_met/etc/pointstat.config'
                               ])
+        return PARSER.parse_args(['--start_analysis_time', '201712250000', '--end_analysis_time', '201712250000',
+                              '--analysis_time_interval', '1', '--forecast_length', '1',
+                              '--obsproc_installation', '/home/szhang/Programs/WRFDA_V3.9.1/WRFDA/var/obsproc',
+                              '--wrf_interp_installation', '/home/szhang/programs/wrf_interp/wrf_interp',
+                              '--met_installation', '/home/szhang/Programs/met-6.0/met-6.0',
+                              '--work_dir', '/home/szhang/Desktop/run_ver/met/nz8kmN-NCEP',
+                              '--run_obs2ascii', '--ascii2nc_config', '/home/szhang/workspace/run_met_20180110/etc/ascii2nc.config',
+                              '--run_wrf_interp', '--model', 'nz8kmN-NCEP', '--domain_id', '2',
+                              '--run_pointstat', '--pointstat_config', '/home/szhang/workspace/run_met_20180110/etc/pointstat.config'
+                              ])
+                        
 
 """
 
@@ -165,7 +176,6 @@ def setup_parser():
     PARSER.add_argument('--pointstat_config', type=str, required=False,
                         help="pointstat config")
 
-   
     return PARSER.parse_args()
     
     

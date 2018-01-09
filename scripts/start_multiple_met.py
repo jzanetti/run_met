@@ -9,7 +9,7 @@ This program is used to run start_met.py multiple times (with multi models)
 
 general_config = {
     'work_dir': '/mnt/WRF/met',
-    'obsproc_installation': '/opt/miniconda2/envs/met/wrfda/work/var/obsproc',
+    'obsproc_installation': '/opt/miniconda2/envs/met/wrfda/WRFDA/var/obsproc',
     'wrf_interp_installation': '/opt/miniconda2/envs/met/wrf_interp',
     'met_installation': '/opt/miniconda2/envs/met/met',
     

@@ -68,7 +68,10 @@ if __name__ == '__main__':
     cur_met_task = args.met_task
     stats_output = {}
     
-    stats_output = plot_processing.return_score_matrix(args, stats_output)
+    plot_processing.return_mpr(args, 'T2')
+    
+    
+    stats_output = plot_processing.return_cnt_cts(args, stats_output)
     plot_processing.plot_score(args, stats_output)
     
     print 'done'

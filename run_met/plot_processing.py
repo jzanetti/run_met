@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 import numpy
 import matplotlib.pyplot as plt
+from mpl_toolkits.basemap import Basemap
 plt.switch_backend('agg')
 import os
 
@@ -48,7 +49,39 @@ def write_stats_output(stats_output, field_name, field_value):
         stats_output[field_name].append(field_value)
     return stats_output
 
-def read_stats(args, cur_score, cur_stats_path, cur_score_name, cur_field):
+def read_mpr_stats(args, cur_stats_path, cur_field):
+    """read mpr stats for all requested stations"""
+    f_stats = open(cur_stats_path, "r")
+    data_lines = f_stats.readlines()
+    
+    mpr_lat = []
+    mpr_lon = []
+    mpr_fcst = []
+    mpr_obs = []
+    mpr_time = []
+    for i, cur_lines in enumerate(data_lines):
+        if i == 0:
+            mpr_header = filter(None, cur_lines.split(' '))
+            mpr_var_index = mpr_header.index('FCST_VAR')
+            mpr_lat_index = mpr_header.index('OBS_LAT')
+            mpr_lon_index = mpr_header.index('OBS_LON')
+            mpr_fcst_index = mpr_header.index('FCST')
+            mpr_obs_index = mpr_header.index('OBS')
+            mpr_time_index = mpr_header.index('FCST_VALID_END')
+        else:
+            cur_lines = filter(None, cur_lines.split(' '))
+            if len(cur_lines) < 10:
+                continue
+            if cur_lines[mpr_var_index] == cur_field:
+                mpr_lat.append(float(cur_lines[mpr_lat_index]))
+                mpr_lon.append(float(cur_lines[mpr_lon_index]))
+                mpr_fcst.append(float(cur_lines[mpr_fcst_index]))
+                mpr_obs.append(float(cur_lines[mpr_obs_index]))
+                mpr_time.append(cur_lines[mpr_time_index])
+    
+    return mpr_lat, mpr_lon, mpr_fcst, mpr_obs, mpr_time
+
+def read_cnt_cts_stats(args, cur_score, cur_stats_path, cur_score_name, cur_field):
     """read stats value from the met output
     example: 
         cur_score: score1
@@ -114,7 +147,72 @@ def read_stats(args, cur_score, cur_stats_path, cur_score_name, cur_field):
     return found_score_value, found_score_upper_bs, found_score_lower_bs
 
 
-def return_score_matrix(args, stats_output):
+def return_mpr(args, cur_field):
+    for i in range(0, len(args.model_list)):
+        cur_model = args.model_list[i]
+        cur_met_dir = os.path.join(args.met_out_dir, 
+                                   cur_model, 'met_dir',
+                                   args.met_task)
+        
+        # 2: loop over all analysis
+        cur_analysis_time = args.start_analysis_time
+        while cur_analysis_time <= args.end_analysis_time:
+            cur_stats_dir = os.path.join(cur_met_dir, 
+                                         cur_analysis_time.strftime('%Y%m%d%H'))
+            
+            # 3: loop over all forecasts (at different valid times)
+            for cur_lead_h in range(1, int(args.forecast_length)+1):
+                cur_valid_time = cur_analysis_time + timedelta(seconds=cur_lead_h*3600)
+                
+                # 4.2 get the met output filepath
+                cur_stats_filename = get_stats_filename(cur_valid_time, 
+                                                            cur_model,
+                                                            args.met_task,
+                                                            'mpr',
+                                                            cur_lead_h)
+                cur_stats_path = os.path.join(cur_stats_dir, cur_stats_filename)
+                mpr_lat, mpr_lon, mpr_fcst, mpr_obs, mpr_time = read_mpr_stats(args, cur_stats_path, cur_field)
+                plot_mpr(mpr_lat, mpr_lon, mpr_fcst, mpr_obs, mpr_time,
+                         cur_analysis_time, cur_valid_time, cur_model, cur_field)
+            
+            cur_analysis_time = cur_analysis_time + \
+                timedelta(seconds = 3600*int(args.analysis_time_interval))
+
+
+    
+def plot_mpr(mpr_lat, mpr_lon, mpr_fcst, mpr_obs, mpr_time,
+             cur_analysis_time, cur_valid_time, cur_model, cur_field):
+    fig = plt.figure()
+    m = Basemap(llcrnrlat=-48.75, urcrnrlat=-30.0,
+                    llcrnrlon=164.5, urcrnrlon=181.50,
+                    resolution='l', projection='cyl',
+                    lat_1=-30, lat_2=-60.0,
+                    lat_0=-40.7, lon_0=167.5)
+    m.drawcoastlines()
+    m.drawcountries()
+    x, y = m(mpr_lon, mpr_lat)
+    
+    mpr_diff = list(numpy.asarray(mpr_fcst) - numpy.asarray(mpr_obs))
+
+    cs = m.scatter(x, y, c=mpr_diff, s=300, marker="o", cmap=plt.get_cmap('bwr'))
+
+    max_mpr_diff = max(abs(numpy.asarray(mpr_diff)))
+
+    plt.clim([-max_mpr_diff, max_mpr_diff])
+
+    cbar = m.colorbar(cs, location='bottom', pad="5%")
+    cbar.set_label('fcst - obs')
+
+    plt.title(cur_analysis_time.strftime('%Y%m%d%H') + ', V' + cur_valid_time.strftime('%Y%m%d%H') + \
+               '\n' + cur_model + ', ' + cur_field)
+
+    out_filename = cur_analysis_time.strftime('%Y%m%d%H') + '_' + cur_valid_time.strftime('%Y%m%d%H') + \
+            '_' + cur_model + '_' + cur_field + '.png'
+    plt.savefig(out_filename, bbox_inches='tight')
+    plt.close()
+                
+
+def return_cnt_cts(args, stats_output):
     """store the extracted score values in a dict"""
     for i in range(0, len(args.model_list)):
         cur_model = args.model_list[i]
@@ -155,7 +253,7 @@ def return_score_matrix(args, stats_output):
                             cur_field_value = cur_field_upper_value = cur_field_lower_value = numpy.NaN
                         else:
                             cur_field_value, cur_field_upper_value, cur_field_lower_value = \
-                                            read_stats(args, cur_score, cur_stats_path, cur_score_name, cur_field)
+                                            read_cnt_cts_stats(args, cur_score, cur_stats_path, cur_score_name, cur_field)
                         
                         # 4.3.3: write outputs
                         stats_output = write_stats_output(stats_output, 'cur_model', cur_model)
@@ -233,7 +331,7 @@ def plot_score(args, stats_output):
                     cur_analysis_time = cur_analysis_time + \
                         timedelta(seconds = 3600*int(args.analysis_time_interval))
 
-            plt.suptitle(task_list[cur_score]['score_name'])
+            plt.suptitle(cur_plot_field + ', ' + task_list[cur_score]['score_name'])
             plt.grid()
             plt.legend(loc='upper left',bbox_to_anchor=(1,0.5), fontsize = 'small')
             xtick_number = int(max(round(len(score_value_list)/6), 1.0))

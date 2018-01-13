@@ -184,7 +184,58 @@ def return_mpr(args, cur_field):
                 timedelta(seconds = 3600*int(args.analysis_time_interval))
 
 
+def return_two_model_comparisons(args, cur_field):
+    cur_stats_path1 = args.model1_mpr_path
+    cur_stats_path2 = args.model2_mpr_path
+            
+            
+    mpr_lat1, mpr_lon1, mpr_fcst1, mpr_obs1, mpr_time1 = read_mpr_stats(args, cur_stats_path1, cur_field)
+    mpr_lat2, mpr_lon2, mpr_fcst2, mpr_obs2, mpr_time2 = read_mpr_stats(args, cur_stats_path2, cur_field)
     
+    model1_better_model2 = []
+    diff_lat = []
+    diff_lon = []
+    
+    for i1, cur_mpr_lat in enumerate(mpr_lat1):
+        i2 = mpr_lat2.index(cur_mpr_lat)
+        
+        if mpr_lon1[i1] != mpr_lon2[i2]:
+            continue
+        
+        diff1 = abs(mpr_fcst1[i1] - mpr_obs1[i1]) 
+        diff2 = abs(mpr_fcst2[i2] - mpr_obs2[i2])
+        
+        if diff1 > diff2:
+            model1_better_model2.append(1)
+        else:
+            model1_better_model2.append(0)
+        
+        diff_lat.append(mpr_lat1[i1])
+        diff_lon.append(mpr_lon1[i1])
+
+    m = Basemap(llcrnrlat=-48.75, urcrnrlat=-30.0,
+                    llcrnrlon=164.5, urcrnrlon=181.50,
+                    resolution='l', projection='cyl',
+                    lat_1=-30, lat_2=-60.0,
+                    lat_0=-40.7, lon_0=167.5)
+    
+    m.drawcoastlines()
+    m.drawcountries()
+    x, y = m(diff_lon, diff_lat)
+    
+    cs = m.scatter(x, y, c=model1_better_model2, s=300, marker="o", cmap=plt.get_cmap('bwr'), edgecolors='k')
+
+    cbar = m.colorbar(cs, pad="5%")
+    cbar.set_label('1(0): {} better(worse) than {}'.format(args.model1_name, args.model2_name))
+
+    title_str = cur_field
+
+    plt.title(title_str)
+
+    out_filename = 'model_com_{}_{}_{}.png'.format(cur_field, args.model1_name, args.model2_name)
+    plt.savefig(out_filename, bbox_inches='tight')
+    plt.close()
+
 def plot_mpr(mpr_lat, mpr_lon, mpr_fcst, mpr_obs, mpr_time,
              cur_analysis_time, cur_valid_time, cur_model, cur_field):
     fig = plt.figure()
@@ -252,7 +303,7 @@ def return_cnt_cts(args, stats_output):
                     # 4.3 start writing output
                     
                     # 4.3.1: loop over all asked fields (e.g., T2, U10)
-                    for cur_field in args.plot_field_list: # e.g., T2
+                    for cur_field in args.cnt_field_list: # e.g., T2
                         # 4.3.2: extract the score values
                         if not os.path.exists(cur_stats_path):
                             cur_field_value = cur_field_upper_value = cur_field_lower_value = numpy.NaN
@@ -308,7 +359,7 @@ def plot_score(args, stats_output):
         x_axis_label.append(cur_valid_time.strftime('%Y%m%d%H'))
         cur_valid_time = cur_valid_time + timedelta(seconds = 3600)
 
-    for cur_plot_field in args.plot_field_list:
+    for cur_plot_field in args.cnt_field_list:
         for cur_score in task_list.keys():
             fig_filename = cur_plot_field + '_' + task_list[cur_score]['score_name'] + '.png'
             plt.figure(figsize=(fig_width, fig_hight))

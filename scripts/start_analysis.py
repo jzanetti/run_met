@@ -5,6 +5,16 @@ import os
 from shutil import copyfile
 import subprocess
 
+'''
+This program is used to produce the stats to compare 
+the background and analysis with the observations
+
+Step1: get the observation at the analysis time
+Step2: copy the background analysis from ***/grb directory in /var/gsi
+Step3: Run verification at both the bkg and analysis and produce
+       the verification in the format of MET
+'''
+
 general_config = {
     'work_dir': '/mnt/WRF/da_tunning',
     'obsproc_installation': '/opt/miniconda2/envs/met/wrfda/WRFDA/var/obsproc',

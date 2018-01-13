@@ -6,8 +6,8 @@ import os
 from pkg_resources import resource_filename
 import shutil
 
-from run_met import fcst_processing, obs_processing, met_processing
-
+from run_met import fcst_processing, obs_processing, \
+    met_processing
 
 """
     1. Synopsis:
@@ -85,7 +85,7 @@ def setup_dir(new_run, working_dir):
     dir_dict['obs_ascii_dir'] = os.path.join(working_dir, 'obs_ascii')
     dir_dict['obs_ascii2nc'] = os.path.join(working_dir, 'ascii2nc')
     dir_dict['fcst_dir'] = os.path.join(working_dir, 'fcst')
-    dir_dict['wrf_interp_dir'] = os.path.join(working_dir, 'wrf_interp')
+    dir_dict['wrf_interp_dir'] = os.path.join(working_dir, 'wp')
     dir_dict['point_stat_dir'] = os.path.join(working_dir, 'met_dir', 'point_stat')
     
     for cdir in dir_dict.keys():
@@ -118,7 +118,8 @@ def setup_parser():
                         required=True, help="met installation")
     PARSER.add_argument('--model', type=str, default='nz8kmN-NCEP', 
                         required=True, help="model name")
-    
+
+  
     # -----------------
     # optional
     # -----------------
@@ -133,6 +134,9 @@ def setup_parser():
     # -----------------
     PARSER.add_argument('--download_obs', dest = 'download_obs', default=False, 
                         help="download observation in little_r",action='store_true')
+    PARSER.add_argument('--pre_download_obs', dest = 'pre_download_obs', type=str, 
+                        help="downloaded obs from previous true (not effective if \
+                        --download_obs is on)", default=None)
     PARSER.add_argument('--download_fcst', dest = 'download_fcst', default=False, 
                         help="download wrfout from S3",action='store_true')
     PARSER.add_argument('--download_fcst_source', dest = 'download_fcst_source', 
@@ -176,6 +180,12 @@ def setup_parser():
     PARSER.add_argument('--pointstat_config', type=str, required=False,
                         help="pointstat config")
 
+    # -----------------------
+    # local_checks
+    # -----------------------
+    PARSER.add_argument('--run_local_checks', dest = 'run_local_checks', default=False, 
+                        help="run point based verification using local codes",action='store_true')
+
     return PARSER.parse_args()
     
     
@@ -195,34 +205,40 @@ def main():
     if args.download_obs:
         obs_processing.download_obs(args, dir_dict['little_r_dir'])
     
-    # 1.2: run obsproc
-    if args.run_obsproc:
-        # 1.2.1 check if model name is provided
-        if not args.model:
-            raise Exception('model name is required for run_obsproc, use --model')
+        # 1.2: run obsproc
+        if args.run_obsproc:
+            # 1.2.1 check if model name is provided
+            if not args.model:
+                raise Exception('model name is required for run_obsproc, use --model')
+            
+            # 1.2.2 check if the model config is provided (according to the model name)
+            fcst_config_path = \
+                resource_filename('run_met', 
+                                  '../../../../run_met/etc/{}.yaml'.format(args.model))
+            if not os.path.exists(fcst_config_path):
+                raise Exception(fcst_config_path + ' does not exist')
+            
+            # 1.2.3 run obsproc
+            obs_processing.run_obsproc(args, fcst_config_path, 
+                                       dir_dict['little_r_dir'], dir_dict['obsproc_dir'])
         
-        # 1.2.2 check if the model config is provided (according to the model name)
-        fcst_config_path = \
-            resource_filename('run_met', 
-                              '../../../../run_met/etc/{}.yaml'.format(args.model))
-        if not os.path.exists(fcst_config_path):
-            raise Exception(fcst_config_path + ' does not exist')
+        # 1.3: convert output from obsproc to the ascii format that required by ascii2nc (met)
+        if args.run_obs2ascii:
+            obsproc_data, processed_list = obs_processing.get_obsproc_obs(args, dir_dict['obsproc_dir'])
+            obs_processing.obsproc2ascii(dir_dict['obs_ascii_dir'], obsproc_data, processed_list)
         
-        # 1.2.3 run obsproc
-        obs_processing.run_obsproc(args, fcst_config_path, 
-                                   dir_dict['little_r_dir'], dir_dict['obsproc_dir'])
+        # 1.4: run ascii2nc
+        if args.run_ascii2nc:
+            if not args.ascii2nc_config:
+                raise Exception('Config for ascii2nc is missing (required by run_ascii2nc), use --ascii2nc_config')
+            obs_processing.ascii2nc(dir_dict['obs_ascii_dir'], dir_dict['obs_ascii2nc'],
+                         args.met_installation, args.ascii2nc_config)
     
-    # 1.3: convert output from obsproc to the ascii format that required by ascii2nc (met)
-    if args.run_obs2ascii:
-        obsproc_data, processed_list = obs_processing.get_obsproc_obs(args, dir_dict['obsproc_dir'])
-        obs_processing.obsproc2ascii(dir_dict['obs_ascii_dir'], obsproc_data, processed_list)
-    
-    # 1.4: run ascii2nc
-    if args.run_ascii2nc:
-        if not args.ascii2nc_config:
-            raise Exception('Config for ascii2nc is missing (required by run_ascii2nc), use --ascii2nc_config')
-        obs_processing.ascii2nc(dir_dict['obs_ascii_dir'], dir_dict['obs_ascii2nc'],
-                     args.met_installation, args.ascii2nc_config)
+    else:
+        if args.pre_download_obs and \
+            (not os.path.exists(os.path.join(dir_dict['obs_ascii2nc'], 'obs_ascii.nc'))):
+            os.symlink(args.pre_download_obs, 
+                       os.path.join(dir_dict['obs_ascii2nc'], 'obs_ascii.nc'))
     
     # ----------------------------------------------
     # 2. Process forecast
@@ -248,7 +264,6 @@ def main():
         met_processing.run_pointstat(args, dir_dict,
                                      args.pointstat_config)
         
-
 
   
 if __name__ == '__main__':

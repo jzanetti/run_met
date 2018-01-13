@@ -56,6 +56,10 @@ def setup_parser():
                         required=True, help="model name")
     PARSER.add_argument('--plot_field_list', nargs='+', required=True,
                         help="fcst fields to be plotted, e.g., T2")
+    PARSER.add_argument('--run_mpr', dest = 'run_mpr', default=False, 
+                        help="run mpr plots (under tests)",action='store_true')
+    PARSER.add_argument('--data_from_ver', dest = 'data_from_ver', default=False, 
+                        help="if point_stat is produced by ver",action='store_true')
 
     return PARSER.parse_args()
 
@@ -68,12 +72,13 @@ if __name__ == '__main__':
     cur_met_task = args.met_task
     stats_output = {}
     
-    plot_processing.return_mpr(args, 'T2')
+    if args.run_mpr:
+        plot_processing.return_mpr(args, 'RH')
     
-    
+
     stats_output = plot_processing.return_cnt_cts(args, stats_output)
     plot_processing.plot_score(args, stats_output)
-    
+
     print 'done'
             
                                

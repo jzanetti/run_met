@@ -18,11 +18,11 @@ def run_pointstat(args, dir_dict, pointstat_config):
     
     while cur_analysis_time <= args.end_analysis_time:
         cur_analysis_dir = os.path.join(dir_dict['wrf_interp_dir'],
-                                        cur_analysis_time.strftime('%Y%m%d%H'))
+                                        cur_analysis_time.strftime('%y%m%d%H'))
         cur_fcst_filename_list = glob(cur_analysis_dir + '/*')
         
         out_dir = os.path.join(dir_dict['point_stat_dir'],
-                                cur_analysis_time.strftime('%Y%m%d%H'))
+                                cur_analysis_time.strftime('%y%m%d%H'))
         
         if not os.path.exists(out_dir):
             os.makedirs(out_dir)
@@ -35,6 +35,7 @@ def run_pointstat(args, dir_dict, pointstat_config):
                                                             'pointstat.config',
                                                             out_dir)
             
+            print point_stat_cmd
             p1 = subprocess.Popen(point_stat_cmd, cwd=dir_dict['point_stat_dir'], shell=True)
             p1.wait()
         

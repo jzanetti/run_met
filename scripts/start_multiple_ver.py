@@ -4,14 +4,17 @@ import subprocess
 import os
 from datetime import datetime, timedelta
 import shutil
-
+import threading
 '''
-This program is used to run start_met.py multiple times (with multi models)
+This program is used to run start_met.py + start_ver.py multiple times (with multi models)
 Modify the following parameters to suite your needs:
  * download_obs:         whether (re)download and process the obseration
  * a_new_run:            if True: the verification work directory will be recreated, old one would be deleted
  * general_config:       Some shared parameters
  * multi_met_config:     Model specific parameters
+ 
+start_met.py is used to provide fcst and obs
+start_ver.py is used for verification
 '''
 
 ############################
@@ -19,11 +22,14 @@ Modify the following parameters to suite your needs:
 ############################
 
 download_obs = True
+download_fcst = True
+run_ver = True
 a_new_run = True
 
 general_config = {
     'work_dir': '/mnt/WRF/met',
     'obs_download_dir': '/mnt/WRF/met/obs',
+    'fcst_download_dir': '/mnt/WRF/met/fcst',
     'obsproc_installation': '/opt/miniconda2/envs/met/wrfda/WRFDA/var/obsproc',
     'wrf_interp_installation': '/opt/miniconda2/envs/met/wrf_interp',
     'met_installation': '/opt/miniconda2/envs/met/met',
@@ -53,6 +59,10 @@ multi_met_config = {
 ############################
 # Unless it is necessary, user should not touch any of the codes below
 ############################
+
+def run_cmd(cur_cmd, doomy_one):
+    p1 = subprocess.Popen(cur_cmd, cwd=os.getcwd(), shell=True)
+    p1.wait()
 
 def setup_cmd():
     
@@ -89,57 +99,94 @@ def setup_cmd():
             --forecast_length {} --analysis_time_interval {} --new_run \
             --obsproc_installation {} --wrf_interp_installation {} \
             --met_installation {} --work_dir {} --model obs \
-            --download_obs --run_obspreprocess --ascii2nc_config {}'.format(earliest_obs_datetime.strftime('%Y%m%d%H%M'),
+            --download_obs --run_obsproc --run_obs2ascii'.format(earliest_obs_datetime.strftime('%Y%m%d%H%M'),
                                    earliest_obs_datetime.strftime('%Y%m%d%H%M'),
                                    int((latest_obs_datetime - earliest_obs_datetime).total_seconds()/3600.0),
                                    1,             
                                    general_config['obsproc_installation'],
                                    general_config['wrf_interp_installation'],
-                                   general_config['met_installation'], obs_download_dir,
-                                   general_config['ascii2nc_config'])
+                                   general_config['met_installation'], obs_download_dir)
         p1 = subprocess.Popen(cur_cmd, cwd=os.getcwd(), shell=True)
         p1.wait()
 
-    obs_nc_path = os.path.join(general_config['obs_download_dir'], 'ascii2nc', 'obs_ascii.nc')
+    obs_ascii = general_config['obs_download_dir']
 
-    # 3.0 start verifications
-    cur_pointstat_config = general_config['pointstat_config']
-    for i in range(0, model_no):
-        print '<><><><><><><><><><><><><><><><><><><>'
-        print 'start verifying {}'.format(multi_met_config['model'][i])
-        print '<><><><><><><><><><><><><><><><><><><>'
+    # 3.0 downlaoad fcst
+    if download_fcst:
+        cmd_thread = []
+        for i in range(0, model_no):
+            print '<><><><><><><><><><><><><><><><><><><>'
+            print 'start download {}'.format(multi_met_config['model'][i])
+            print '<><><><><><><><><><><><><><><><><><><>'
+            
+            cur_start_analysis = multi_met_config['start_analysis'][i]
+            cur_end_analysis = multi_met_config['end_analysis'][i]
+            cur_forecast_length = multi_met_config['forecast_length'][i]
+            cur_analysis_time_interval = multi_met_config['analysis_time_interval'][i]
+            cur_model = multi_met_config['model'][i]
+            cur_model_name = multi_met_config['model_name'][i]
+            cur_domain_id = multi_met_config['domain_id'][i]
+            cur_download_fcst_source = multi_met_config['download_fcst_source'][i]
+    
+            cur_cmd = 'start_met.py --start_analysis {} --end_analysis {} \
+            --forecast_length {} --analysis_time_interval {} \
+            --obsproc_installation {} --wrf_interp_installation {} \
+            --met_installation {} --work_dir {} \
+            --model {} --domain_id {} \
+             --download_fcst \
+            --run_wrf_interp  \
+            --download_fcst_source {} \
+            '.format(
+                cur_start_analysis, cur_end_analysis,
+                cur_forecast_length, cur_analysis_time_interval,
+                general_config['obsproc_installation'],
+                general_config['wrf_interp_installation'],
+                general_config['met_installation'],
+                os.path.join(general_config['fcst_download_dir'], cur_model_name),
+                cur_model, cur_domain_id,
+                cur_download_fcst_source)
+            
+            cmd_thread.append(threading.Thread(target=run_cmd, args = (cur_cmd, 'doomy')))
         
-        cur_start_analysis = multi_met_config['start_analysis'][i]
-        cur_end_analysis = multi_met_config['end_analysis'][i]
-        cur_forecast_length = multi_met_config['forecast_length'][i]
-        cur_analysis_time_interval = multi_met_config['analysis_time_interval'][i]
-        cur_model = multi_met_config['model'][i]
-        cur_model_name = multi_met_config['model_name'][i]
-        cur_domain_id = multi_met_config['domain_id'][i]
-        cur_download_fcst_source = multi_met_config['download_fcst_source'][i]
+        for tq in cmd_thread:
+            tq.start()
+        
+        for tq in cmd_thread:
+            tq.join()
+            
+    # 4.0: start ver
+    if run_ver:
+        cmd_thread = []
+        for i in range(0, model_no):
+            print '<><><><><><><><><><><><><><><><><><><>'
+            print 'start verification {}'.format(multi_met_config['model'][i])
+            print '<><><><><><><><><><><><><><><><><><><>'
+            cur_start_analysis = multi_met_config['start_analysis'][i]
+            cur_end_analysis = multi_met_config['end_analysis'][i]
+            cur_forecast_length = multi_met_config['forecast_length'][i]
+            cur_analysis_time_interval = multi_met_config['analysis_time_interval'][i]
+            cur_model = multi_met_config['model'][i]
+            cur_model_name = multi_met_config['model_name'][i]
+            cur_domain_id = multi_met_config['domain_id'][i]
 
-        cur_cmd = 'start_met.py --start_analysis {} --end_analysis {} \
-        --forecast_length {} --analysis_time_interval {} \
-        --obsproc_installation {} --wrf_interp_installation {} \
-        --met_installation {} --work_dir {} \
-        --model {} --domain_id {} \
-        --pre_download_obs {} --download_fcst \
-        --run_wrf_interp --run_pointstat \
-        --download_fcst_source {} \
-        --pointstat_config {}'.format(
-            cur_start_analysis, cur_end_analysis,
-            cur_forecast_length, cur_analysis_time_interval,
-            general_config['obsproc_installation'],
-            general_config['wrf_interp_installation'],
-            general_config['met_installation'],
-            os.path.join(general_config['work_dir'], cur_model_name),
-            cur_model, cur_domain_id, obs_nc_path,
-            cur_download_fcst_source,
-             cur_pointstat_config
-            )
-        print cur_cmd
-        p1 = subprocess.Popen(cur_cmd, cwd=os.getcwd(), shell=True)
-        p1.wait()
+            cur_cmd = 'start_ver.py --start_analysis {} --end_analysis {} \
+                --forecast_length {} --analysis_time_interval {} \
+                --pre_download_obs {} --pre_download_fcst {} \
+                --model_list {} --domain_id {} --work_dir {}'.format(
+                    cur_start_analysis, cur_end_analysis,
+                    cur_forecast_length, cur_analysis_time_interval,
+                    general_config['obs_download_dir'],
+                    os.path.join(general_config['fcst_download_dir'], cur_model_name),
+                    multi_met_config['model'][i], 2,
+                    general_config['work_dir'])
+
+            cmd_thread.append(threading.Thread(target=run_cmd, args = (cur_cmd, 'doomy')))
+        
+        for tq in cmd_thread:
+            tq.start()
+        
+        for tq in cmd_thread:
+            tq.join()
 
     print '-------------------------------------------'
     print 'Final results: {}'.format(general_config['work_dir'])

@@ -31,9 +31,10 @@ task_list = {
                 },
              }
 
-def get_stats_filename(cur_valid_time, cur_model, cur_met_task, cur_score_type, cur_lead_h):
-    if 'obsnudge' in cur_model:
-        cur_lead_h = cur_lead_h + 6
+def get_stats_filename(args, cur_valid_time, cur_model, cur_met_task, cur_score_type, cur_lead_h):
+    if not args.data_from_ver:
+        if cur_model.endswith('n') or cur_model.endswith('nudge'):
+            cur_lead_h = cur_lead_h + 6
         
     stats_filename = '{}_{:02d}0000L_{}0000V_{}.txt'.format(
             cur_met_task,
@@ -97,6 +98,7 @@ def read_cnt_cts_stats(args, cur_score, cur_stats_path, cur_score_name, cur_fiel
         return numpy.NaN, numpy.NaN, numpy.NaN
     else:
         for i, cur_lines in enumerate(data_lines):
+            cur_lines = cur_lines.strip()
             if i == 0:
                 score_header = filter(None, cur_lines.split(' '))
             else:
@@ -128,8 +130,11 @@ def read_cnt_cts_stats(args, cur_score, cur_stats_path, cur_score_name, cur_fiel
         raise Exception('score type length and score value length are not identical')
     
     # extract the values
-    req_score_index = score_header.index(cur_score_name)   
-    found_score_value = float(score_value_list[req_score_index])
+    req_score_index = score_header.index(cur_score_name)
+    if  score_value_list[req_score_index] != 'NA':
+        found_score_value = float(score_value_list[req_score_index])
+    else:
+        found_score_value = None
     
     bootstrap_type = task_list[cur_score]['bootstrap']
     if bootstrap_type:
@@ -158,14 +163,14 @@ def return_mpr(args, cur_field):
         cur_analysis_time = args.start_analysis_time
         while cur_analysis_time <= args.end_analysis_time:
             cur_stats_dir = os.path.join(cur_met_dir, 
-                                         cur_analysis_time.strftime('%Y%m%d%H'))
+                                         cur_analysis_time.strftime('%y%m%d%H'))
             
             # 3: loop over all forecasts (at different valid times)
             for cur_lead_h in range(1, int(args.forecast_length)+1):
                 cur_valid_time = cur_analysis_time + timedelta(seconds=cur_lead_h*3600)
                 
                 # 4.2 get the met output filepath
-                cur_stats_filename = get_stats_filename(cur_valid_time, 
+                cur_stats_filename = get_stats_filename(args, cur_valid_time, 
                                                             cur_model,
                                                             args.met_task,
                                                             'mpr',
@@ -224,7 +229,7 @@ def return_cnt_cts(args, stats_output):
         cur_analysis_time = args.start_analysis_time
         while cur_analysis_time <= args.end_analysis_time:
             cur_stats_dir = os.path.join(cur_met_dir, 
-                                         cur_analysis_time.strftime('%Y%m%d%H'))
+                                         cur_analysis_time.strftime('%y%m%d%H'))
             
             # 3: loop over all forecasts (at different valid times)
             for cur_lead_h in range(1, int(args.forecast_length)+1):
@@ -237,7 +242,7 @@ def return_cnt_cts(args, stats_output):
                     cur_score_type = task_list[cur_score]['score_type']                 # score_type: cnt, cts etc.
                     
                     # 4.2 get the met output filepath
-                    cur_stats_filename = get_stats_filename(cur_valid_time, 
+                    cur_stats_filename = get_stats_filename(args, cur_valid_time, 
                                                             cur_model,
                                                             args.met_task,
                                                             cur_score_type,

@@ -17,7 +17,7 @@ def download_fcst(args, fcst_dir):
 
     while cur_analysis_time <= args.end_analysis_time:
         cur_local_fcst_dir = \
-            os.path.join(fcst_dir, cur_analysis_time.strftime('%Y%m%d%H'))
+            os.path.join(fcst_dir, cur_analysis_time.strftime('%y%m%d%H'))
         
         if args.download_fcst_source == 'archive':
             archive_dir = 's3://metservice-research-us-west-2/research/archive-data/wrf_archive/wrfout'
@@ -109,8 +109,8 @@ def wrf_interp(args, fcst_dir, wrf_interp_dir):
     
     while cur_analysis_time <= args.end_analysis_time:
         
-        path_to_input = os.path.join(fcst_dir, cur_analysis_time.strftime('%Y%m%d%H'))
-        path_to_output = os.path.join(wrf_interp_dir, cur_analysis_time.strftime('%Y%m%d%H'))
+        path_to_input = os.path.join(fcst_dir, cur_analysis_time.strftime('%y%m%d%H'))
+        path_to_output = os.path.join(wrf_interp_dir, cur_analysis_time.strftime('%y%m%d%H'))
         root_name = 'wrf_hourly_' + args.model
         grid_id = int(args.domain_id)
         

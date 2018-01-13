@@ -19,8 +19,8 @@ def download_obs(args, little_r_dir):
     status = 'research'
     region = 'us-west-2'
     
-    # -38.0 -34.0 -172.0 -176.0 is the obs domain covering NZ
-    obs2little_r_cmd = 'obs2little_r {} {} {} -38.0 -34.0 -172.0 -176.0 1 --to {} \
+    # -48.0 -32.0 165.0 -176.0 is the obs domain covering NZ
+    obs2little_r_cmd = 'obs2little_r {} {} {} -48.0 -32.0 165.0 -176.0 1 --to {} \
                     --cutoff-time {} --num_threads 8'.format(status, region, 
                                             start_obs_datetime.strftime('%Y%m%d%H%M'),
                                             end_obs_datetime.strftime('%Y%m%d%H%M'),

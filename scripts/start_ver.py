@@ -67,7 +67,7 @@ def setup_parser():
                         required=True, help="model name")
     PARSER.add_argument('--work_dir', type=str,  
                         required=True, help="model name")
-    
+
     return PARSER.parse_args()
         
 

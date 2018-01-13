@@ -205,23 +205,35 @@ def setup_ver(args):
                 mod_obs_ascii_dir = os.path.join(args.work_dir, wrfname_map[cur_model],
                                                   'mod_obs_ascii',
                                                   cur_analysis_time.strftime('%y%m%d%H'))
-                cut_cnt_dir = os.path.join(args.work_dir, wrfname_map[cur_model],
+                cut_met_dir = os.path.join(args.work_dir, wrfname_map[cur_model],
                                                   'met_dir', 'point_stat',
                                                   cur_analysis_time.strftime('%y%m%d%H'))
     
                 cut_cnt_filename = 'point_stat_0{}0000L_{}0000V_cnt.txt'.format(cur_fcst_h,
                                                         cur_valid_time.strftime('%Y%m%d_%H'))
+
+                cut_mpr_filename = 'point_stat_0{}0000L_{}0000V_mpr.txt'.format(cur_fcst_h,
+                                                        cur_valid_time.strftime('%Y%m%d_%H'))
                 
-                cut_cnt_path = os.path.join(cut_cnt_dir, cut_cnt_filename)         
+                cut_cnt_path = os.path.join(cut_met_dir, cut_cnt_filename)
+                cut_mpr_path = os.path.join(cut_met_dir, cut_mpr_filename)    
                 
                 if os.path.exists(cut_cnt_path):
                     os.remove(cut_cnt_path)
+
+                if os.path.exists(cut_mpr_path):
+                    os.remove(cut_mpr_path)
                 
                 cut_cnt_fid = open(cut_cnt_path, "a")
                 cnt_header = 'MODEL FCST_LEAD FCST_VALID_BEG FCST_VALID_END OBS_VALID_BEG OBS_VALID_END \
                       FCST_VAR OBS_VAR RMSE RMSE_BCL RMSE_BCU ME ME_BCL ME_BCU MAE MAE_BCL MAE_BCU FCST_THRESH OBS_THRESH \n'
+
+                cut_mpr_fid = open(cut_mpr_path, "a")
+                mpr_header = 'MODEL FCST_LEAD FCST_VALID_BEG FCST_VALID_END OBS_VALID_BEG OBS_VALID_END \
+                      FCST_VAR OBS_VAR OBS_LAT OBS_LON FCST OBS \n'
                 
                 cut_cnt_fid.write(cnt_header)
+                cut_mpr_fid.write(mpr_header)
     
                 if not os.path.exists(mod_obs_ascii_dir):
                     os.makedirs(mod_obs_ascii_dir)
@@ -230,25 +242,58 @@ def setup_ver(args):
                     cur_lat_name = verf_field[cur_ver_field]['lat_name']
                     cur_lon_name = verf_field[cur_ver_field]['lon_name']
                 
-                    obs_data_list = read_obs_ascii(obs_ascii_path, cur_valid_time, cur_ver_field)
+                    #obs_data_list = read_obs_ascii(obs_ascii_path, cur_valid_time, cur_ver_field)
                     
-                    fcst_obs_list = get_model_value(cur_model_path,  cur_ver_field, 
-                                                    cur_lat_name, cur_lon_name,
-                                                    obs_data_list)
+                    #fcst_obs_list = get_model_value(cur_model_path,  cur_ver_field, 
+                    #                                cur_lat_name, cur_lon_name,
+                    #                                obs_data_list)
                     mod_obs_ascii_path = os.path.join(mod_obs_ascii_dir,
                                                       cur_ver_field + '_' + \
                                                       cur_valid_time.strftime('%y%m%d%H') + '.mod_obs')
-                    write_fcst_obs_list(fcst_obs_list, mod_obs_ascii_path)
+                    #write_fcst_obs_list(fcst_obs_list, mod_obs_ascii_path)
                     
                     generate_cnt(cut_cnt_fid, cur_model, mod_obs_ascii_path,
-                                 cur_fcst_h, cur_valid_time, cur_ver_field,
-                                 )
+                                 cur_fcst_h, cur_valid_time, cur_ver_field)
+
+                    generate_mpr(cut_mpr_fid, cur_model, mod_obs_ascii_path,
+                                 cur_fcst_h, cur_valid_time, cur_ver_field)
                 
                 cut_cnt_fid.close()
+                cut_mpr_fid.close()
                     
             cur_analysis_time = cur_analysis_time + \
                     timedelta(seconds = 3600*int(args.analysis_time_interval))
+
+def generate_mpr(cur_fid, cur_model, mod_obs_ascii_path,
+                 cur_fcst_h, cur_valid_time,
+                 cur_fcst_var):
+    """generate the mpr file (format is similar to the one produce by MET)"""
+    with open(mod_obs_ascii_path) as f:
+        lines = f.readlines()
+
+    model = cur_model
+    fcst_lead = cur_fcst_h
+    fcst_valid_beg = cur_valid_time.strftime('%Y%m%d_%H0000')
+    fcst_valid_end = fcst_valid_beg
+    obs_valid_beg = cur_valid_time.strftime('%Y%m%d_%H0000')
+    obs_valid_end = obs_valid_beg
+    fcst_var = cur_fcst_var
+    obs_var = cur_fcst_var
+    for i, line in enumerate(lines):
+        if i == 0:
+            continue
+        obs_lat = float(line.split(' ')[2])
+        obs_lon = float(line.split(' ')[3])
+        fcst = float(line.split(' ')[7])
+        obs = float(line.split(' ')[4])
+        cut_mpr_line = '{} {} {} {} {} {} {} {} {} {} {} {}\n'.format(model, fcst_lead,
+                            fcst_valid_beg, fcst_valid_end,
+                            obs_valid_beg, obs_valid_end,
+                            fcst_var, obs_var,
+                            obs_lat, obs_lon, fcst, obs)
     
+        cur_fid.write(cut_mpr_line)
+
 def generate_cnt(cur_fid, cur_model, mod_obs_ascii_path,
                  cur_fcst_h, cur_valid_time,
                  cur_fcst_var):

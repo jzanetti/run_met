@@ -75,10 +75,10 @@ if __name__ == '__main__':
     if args.run_mpr:
         plot_processing.return_mpr(args, 'RH')
     
-
+    '''
     stats_output = plot_processing.return_cnt_cts(args, stats_output)
     plot_processing.plot_score(args, stats_output)
-
+    '''
     print 'done'
             
                                

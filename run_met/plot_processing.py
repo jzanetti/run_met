@@ -235,11 +235,11 @@ def return_two_model_comparisons(args, cur_field):
     cbar.set_label('+: {} is worse than {}'.format(args.model1_name, args.model2_name))
     
     plt.clim([-max_diff, max_diff])
-    title_str = cur_field
+    title_str = cur_field + ', ' + args.valid_time
 
     plt.title(title_str)
 
-    out_filename = 'model_com_{}_{}_{}.png'.format(cur_field, args.model1_name, args.model2_name)
+    out_filename = 'model_com_{}_{}_{}_{}.png'.format(cur_field, args.model1_name, args.model2_name, args.valid_time)
     plt.savefig(out_filename, bbox_inches='tight')
     plt.close()
 

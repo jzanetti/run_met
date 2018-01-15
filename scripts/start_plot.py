@@ -68,9 +68,9 @@ def setup_parser():
     PARSER.add_argument('--model_list', nargs='+', 
                         required=True, 
                         help="model name")
-    PARSER.add_argument('--run_mpr', dest = 'run_mpr', default=True, 
+    PARSER.add_argument('--run_mpr', dest = 'run_mpr', default=False, 
                         help="run mpr plots (under tests)",action='store_true')
-    PARSER.add_argument('--run_cnt', dest = 'run_cnt', default=True, 
+    PARSER.add_argument('--run_cnt', dest = 'run_cnt', default=False, 
                         help="run mpr plots (under tests)",action='store_true')
     
     

@@ -242,15 +242,15 @@ def setup_ver(args):
                     cur_lat_name = verf_field[cur_ver_field]['lat_name']
                     cur_lon_name = verf_field[cur_ver_field]['lon_name']
                 
-                    #obs_data_list = read_obs_ascii(obs_ascii_path, cur_valid_time, cur_ver_field)
+                    obs_data_list = read_obs_ascii(obs_ascii_path, cur_valid_time, cur_ver_field)
                     
-                    #fcst_obs_list = get_model_value(cur_model_path,  cur_ver_field, 
-                    #                                cur_lat_name, cur_lon_name,
-                    #                                obs_data_list)
+                    fcst_obs_list = get_model_value(cur_model_path,  cur_ver_field, 
+                                                    cur_lat_name, cur_lon_name,
+                                                    obs_data_list)
                     mod_obs_ascii_path = os.path.join(mod_obs_ascii_dir,
                                                       cur_ver_field + '_' + \
                                                       cur_valid_time.strftime('%y%m%d%H') + '.mod_obs')
-                    #write_fcst_obs_list(fcst_obs_list, mod_obs_ascii_path)
+                    write_fcst_obs_list(fcst_obs_list, mod_obs_ascii_path)
                     
                     generate_cnt(cut_cnt_fid, cur_model, mod_obs_ascii_path,
                                  cur_fcst_h, cur_valid_time, cur_ver_field)

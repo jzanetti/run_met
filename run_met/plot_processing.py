@@ -207,7 +207,7 @@ def return_two_model_comparisons(args, cur_field):
         
         # f_diff < 0: model1 better than model 2
         # f_diff > 0: model1 worse than model 2
-        f_diff.append(diff1 - diff2)
+        f_diff.append(abs(diff1) - abs(diff2))
 
         if diff1 > diff2:
             model1_better_model2.append(1)

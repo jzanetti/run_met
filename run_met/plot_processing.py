@@ -195,7 +195,7 @@ def return_two_model_comparisons(args, cur_field):
     model1_better_model2 = []
     diff_lat = []
     diff_lon = []
-    
+    f_diff = []
     for i1, cur_mpr_lat in enumerate(mpr_lat1):
         i2 = mpr_lat2.index(cur_mpr_lat)
         
@@ -205,6 +205,10 @@ def return_two_model_comparisons(args, cur_field):
         diff1 = abs(mpr_fcst1[i1] - mpr_obs1[i1]) 
         diff2 = abs(mpr_fcst2[i2] - mpr_obs2[i2])
         
+        # f_diff < 0: model1 better than model 2
+        # f_diff > 0: model1 worse than model 2
+        f_diff.append(diff1 - diff2)
+
         if diff1 > diff2:
             model1_better_model2.append(1)
         else:
@@ -223,11 +227,14 @@ def return_two_model_comparisons(args, cur_field):
     m.drawcountries()
     x, y = m(diff_lon, diff_lat)
     
-    cs = m.scatter(x, y, c=model1_better_model2, s=300, marker="o", cmap=plt.get_cmap('bwr'), edgecolors='k')
-
+    max_diff = max(abs(numpy.asarray(f_diff)))
+    
+    #cs = m.scatter(x, y, c=model1_better_model2, s=300, marker="o", cmap=plt.get_cmap('bwr'), edgecolors='k')
+    cs = m.scatter(x, y, c=f_diff, s=300, marker="o", cmap=plt.get_cmap('bwr'), edgecolors='k')
     cbar = m.colorbar(cs, pad="5%")
-    cbar.set_label('1(0): {} better(worse) than {}'.format(args.model1_name, args.model2_name))
-
+    cbar.set_label('+: {} is worse than {}'.format(args.model1_name, args.model2_name))
+    
+    plt.clim([-max_diff, max_diff])
     title_str = cur_field
 
     plt.title(title_str)

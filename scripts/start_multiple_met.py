@@ -40,7 +40,7 @@ multi_met_config = {
                      '201712250100','201712250200'],
     'forecast_length': [6, 6, 6, 6],
     'analysis_time_interval': [1, 1, 1, 1],
-    'model': ['nz8kmN-NCEP', 'nz8kmN-NCEP-obsnudge', 'nz8kmN-NCEP-var', 'nz8kmN-NCEP-var'],
+    'model': ['nz8kmN-NCEP', 'nz8kmN-NCEP-obsnudge-39', 'nz8kmN-NCEP-var', 'nz8kmN-NCEP-var'],
     'model_name': ['NCEP8', 'NCEP8n', 'NCEP8v', 'NCEP8v'],
     'domain_id': [2, 2, 2, 2],
     'download_fcst_source':[

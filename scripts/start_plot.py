@@ -19,12 +19,23 @@ plot the met outputs
                               '--met_out_dir', '/home/szhang/Desktop/run_ver/met',
                               '--plot_field_list', 'T2'])
 
+    return PARSER.parse_args(['--start_analysis_time', '201802200000',
+                              '--end_analysis_time', '201802200100',
+                              '--forecast_length', '12',
+                              '--analysis_time_interval', '1',
+                              '--model_list', 'NCEP8n', 'gsi_rad_only', 'combined_rad_only', 'wrfda_rad_only',
+                              '--met_task', 'point_stat',
+                              '--met_out_dir', '/tmp/met',
+                              '--run_cnt', '--data_from_ver',
+                              '--cnt_field_list', 'RAINNC'])
+
 [script command]:
     start_plot.py --start_analysis_time 201712250000 --end_analysis_time 201712250000 --forecast_length 6 
                   --analysis_time_interval 1 --model_list nz8kmN-NCEP nz8kmN-NCEP-obsnudge
                   --met_task point_stat
                   --met_out_dir /home/szhang/Desktop/run_ver/met
                   --plot_field_list T2
+                  
 '''
 
 def start_check(args):

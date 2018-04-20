@@ -19,13 +19,14 @@
 
 '''
 debug:
-    return PARSER.parse_args(['--start_analysis_time', '201712250000',
-                              '--end_analysis_time', '201712250000',
+    return PARSER.parse_args(['--start_analysis_time', '201802200100',
+                              '--end_analysis_time', '201802200100',
                               '--analysis_time_interval', '1',
-                              '--forecast_length', '1',
+                              '--forecast_length', '2',
                               '--pre_download_obs', '/tmp/met/obs',
-                              '--pre_download_fcst', '/tmp/met/NCEP8',
-                              '--model_list', 'nz8kmN-NCEP',
+                              '--pre_download_fcst', '/tmp/met/fcst/gsi_rad_only',
+                              '--pre_download_radar', '/home/szhang/data/radar/new',
+                              '--model_list', 'gsi_rad_only',
                               '--domain_id', '2',
                               '--work_dir', '/tmp/ver/'])
 '''
@@ -61,12 +62,26 @@ def setup_parser():
                         required=True, help="pre_download_obs")
     PARSER.add_argument('--pre_download_fcst', type=str, 
                         required=True, help="pre_download_fcst")
+    PARSER.add_argument('--pre_download_radar', type=str, 
+                        default=None, help="pre download radar accumulations (hourly)")
     PARSER.add_argument('--model_list', nargs='+', 
                         required=True, help="model name")
     PARSER.add_argument('--domain_id', type=str, 
                         required=True, help="model name")
     PARSER.add_argument('--work_dir', type=str,  
                         required=True, help="model name")
+    PARSER.add_argument('--run_radar_verification', dest='run_radar_verification',
+                        default=False,
+                        action='store_true')
+    PARSER.add_argument('--run_conv_verification', dest='run_conv_verification',
+                        default=False,
+                        action='store_true')
+    PARSER.add_argument('--scale_the_model', dest='scale_the_model',
+                        default=False,
+                        action='store_true')
+    PARSER.add_argument('--radar_verif_thres', type=str,
+                        default='0.2', help="model name")
+
 
     return PARSER.parse_args()
         

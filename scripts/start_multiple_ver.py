@@ -15,44 +15,58 @@ Modify the following parameters to suite your needs:
  
 start_met.py is used to provide fcst and obs
 start_ver.py is used for verification
+
+
+Note for the rainfall verification:
+  * Note that if you want to run rainfall-radar verification, you need to run 
+    "start_multiple_radar.py" before this script to download the required radar data
+    from "start_multiple_radar.py", you will have "output" directory, and this
+    "output" would be "radar_download_dir" in this script
+  * if radar_download_dir is provided but no data being available there, none of
+    the verifications will be carried out, so if you don't want the rainfall 
+    verification, simply set radar_download_dir=None
 '''
 
 ############################
 #User should modify the following parameters
 ############################
 
-download_obs = True
-download_fcst = True
+download_obs = False
+download_fcst = False
 run_ver = True
-a_new_run = True
+a_new_run = False
+run_radar_verification = True
+run_conv_verification = False
+scale_the_model = False
 
 general_config = {
-    'work_dir': '/mnt/WRF/met',
-    'obs_download_dir': '/mnt/WRF/met/obs',
-    'fcst_download_dir': '/mnt/WRF/met/fcst',
-    'obsproc_installation': '/opt/miniconda2/envs/met/wrfda/WRFDA/var/obsproc',
-    'wrf_interp_installation': '/opt/miniconda2/envs/met/wrf_interp',
-    'met_installation': '/opt/miniconda2/envs/met/met',
-    'ascii2nc_config': '/opt/miniconda2/envs/met/lib/python2.7/site-packages/run_met/../../../../run_met/etc/ascii2nc.config',
-    'pointstat_config': '/opt/miniconda2/envs/met/lib/python2.7/site-packages/run_met/../../../../run_met/etc/pointstat.config'
+    'work_dir': '/tmp/met',
+    'obs_download_dir': '/tmp/met/obs',
+    'fcst_download_dir': '/tmp/met/fcst',
+    'obsproc_installation': '/home/szhang/Programs/WRFDA_V3.9.1/WRFDA/var/obsproc',
+    'wrf_interp_installation': '/home/szhang/Programs/anaconda2/envs/radar2/wrf_interp',
+    'met_installation': None,
     } 
 
 multi_met_config = {
-    'start_analysis': ['201712250000', 
-                       '201712250000',
-                       '201712250100', '201712250200'],
-    'end_analysis': ['201712250000', 
-                     '201712250000',
-                     '201712250100','201712250200'],
-    'forecast_length': [6, 6, 6, 6],
+    'start_analysis': ['201802200000', '201802200100', '201802200100', '201802200100'],
+    'end_analysis': ['201802200000', '201802200100', '201802200100', '201802200100'],
+    'forecast_length': [12, 12, 12, 12],
     'analysis_time_interval': [1, 1, 1, 1],
-    'model': ['nz8kmN-NCEP', 'nz8kmN-NCEP-obsnudge', 'nz8kmN-NCEP-var', 'nz8kmN-NCEP-var'],
-    'model_name': ['NCEP8', 'NCEP8n', 'NCEP8v', 'NCEP8v'],
+    'model': ['nz8kmN-NCEP-obsnudge-39', 'gsi_rad_only', 'combined_rad_only', 'wrfda_rad_only'],
+    'model_name': ['obsnudge', 'gsi', 'combined', 'wrfda'],
     'domain_id': [2, 2, 2, 2],
+    'radar_verification_thres': [2.5, 2.5, 2.5, 2.5],
+    'download_fcst_unique_id': ['12345','12345','12345','12345'],
     'download_fcst_source':[
-        'internal',
-        'internal',
-        'internal', 'internal'],
+        's3://metservice-research-us-west-2/research/experiments/sijin/OnDemand/cyclone_gita/output',
+        's3://metservice-research-us-west-2/research/experiments/sijin/OnDemand/cyclone_gita/output',
+        's3://metservice-research-us-west-2/research/experiments/sijin/OnDemand/cyclone_gita/output',
+        's3://metservice-research-us-west-2/research/experiments/sijin/OnDemand/cyclone_gita/output'],
+    'radar_download_dir': ['/home/szhang/data/radar/new',
+                           '/home/szhang/data/radar/new',
+                           '/home/szhang/data/radar/new',
+                           '/home/szhang/data/radar/new']
     }
 
 
@@ -95,11 +109,11 @@ def setup_cmd():
         earliest_obs_datetime = min(start_analysis_in_datetime)
         latest_obs_datetime = max(end_analysis_in_datetime) + timedelta(seconds = max(
             multi_met_config['forecast_length'])*3600)
-        cur_cmd = 'start_met.py --start_analysis {} --end_analysis {} \
-            --forecast_length {} --analysis_time_interval {} --new_run \
-            --obsproc_installation {} --wrf_interp_installation {} \
-            --met_installation {} --work_dir {} --model obs \
-            --download_obs --run_obsproc --run_obs2ascii'.format(earliest_obs_datetime.strftime('%Y%m%d%H%M'),
+        cur_cmd = ('start_met.py --start_analysis {} --end_analysis {} ' + 
+            '--forecast_length {} --analysis_time_interval {} --new_run ' + 
+            '--obsproc_installation {} --wrf_interp_installation {} ' + 
+            '--met_installation {} --work_dir {} --model obs ' + 
+            '--download_obs --run_obsproc --run_obs2ascii').format(earliest_obs_datetime.strftime('%Y%m%d%H%M'),
                                    earliest_obs_datetime.strftime('%Y%m%d%H%M'),
                                    int((latest_obs_datetime - earliest_obs_datetime).total_seconds()/3600.0),
                                    1,             
@@ -127,13 +141,15 @@ def setup_cmd():
             cur_model_name = multi_met_config['model_name'][i]
             cur_domain_id = multi_met_config['domain_id'][i]
             cur_download_fcst_source = multi_met_config['download_fcst_source'][i]
-    
+            cur_fcst_unique_id = multi_met_config['download_fcst_unique_id'][i]
+            
             cur_cmd = 'start_met.py --start_analysis {} --end_analysis {} \
             --forecast_length {} --analysis_time_interval {} \
             --obsproc_installation {} --wrf_interp_installation {} \
             --met_installation {} --work_dir {} \
             --model {} --domain_id {} \
              --download_fcst \
+            --download_fcst_unique_id {} \
             --run_wrf_interp  \
             --download_fcst_source {} \
             '.format(
@@ -144,6 +160,7 @@ def setup_cmd():
                 general_config['met_installation'],
                 os.path.join(general_config['fcst_download_dir'], cur_model_name),
                 cur_model, cur_domain_id,
+                cur_fcst_unique_id,
                 cur_download_fcst_source)
             
             cmd_thread.append(threading.Thread(target=run_cmd, args = (cur_cmd, 'doomy')))
@@ -168,17 +185,27 @@ def setup_cmd():
             cur_model = multi_met_config['model'][i]
             cur_model_name = multi_met_config['model_name'][i]
             cur_domain_id = multi_met_config['domain_id'][i]
+            radar_download_dir = multi_met_config['radar_download_dir'][i]
+            cur_radar_verification_thres = multi_met_config['radar_verification_thres'][i]
 
             cur_cmd = 'start_ver.py --start_analysis {} --end_analysis {} \
                 --forecast_length {} --analysis_time_interval {} \
                 --pre_download_obs {} --pre_download_fcst {} \
-                --model_list {} --domain_id {} --work_dir {}'.format(
+                --model_list {} --domain_id {} --work_dir {} --pre_download_radar {} \
+                --radar_verif_thres {}'.format(
                     cur_start_analysis, cur_end_analysis,
                     cur_forecast_length, cur_analysis_time_interval,
                     general_config['obs_download_dir'],
                     os.path.join(general_config['fcst_download_dir'], cur_model_name),
                     multi_met_config['model'][i], 2,
-                    general_config['work_dir'])
+                    general_config['work_dir'], radar_download_dir, cur_radar_verification_thres)
+
+            if run_radar_verification:
+                cur_cmd = cur_cmd + ' --run_radar_verification'
+            if run_conv_verification:
+                cur_cmd = cur_cmd + ' --run_conv_verification'
+            if scale_the_model:
+                cur_cmd = cur_cmd + ' --scale_the_model'
 
             cmd_thread.append(threading.Thread(target=run_cmd, args = (cur_cmd, 'doomy')))
         

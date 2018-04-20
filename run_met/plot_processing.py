@@ -5,7 +5,6 @@ from mpl_toolkits.basemap import Basemap
 plt.switch_backend('agg')
 import os
 
-
 # configure the plot
 task_list = {
     'score1': {'score_name': 'ME',
@@ -29,7 +28,15 @@ task_list = {
                 'condition_name': None,
                 'condition_value': None
                 },
+    'score4': { 'score_name': 'CSI',
+                'score_type': 'cnt',
+                'met_task': 'point_stat',
+                'bootstrap': None,
+                'condition_name': None,
+                'condition_value': None
+                },
              }
+
 
 def get_stats_filename(args, cur_valid_time, cur_model, cur_met_task, cur_score_type, cur_lead_h):
     if not args.data_from_ver:
@@ -307,6 +314,9 @@ def return_cnt_cts(args, stats_output):
                                                             cur_lead_h)
                     cur_stats_path = os.path.join(cur_stats_dir, cur_stats_filename)
                     
+                    if not os.path.exists(cur_stats_path):
+                        continue
+                    
                     # 4.3 start writing output
                     
                     # 4.3.1: loop over all asked fields (e.g., T2, U10)
@@ -348,6 +358,8 @@ def extract_value_from_stats_output(stats_output, cur_score, cur_model, cur_vali
     
     if len(score_value_list) > 1:
         raise Exception ('mutiple values for one score found, quit')
+    elif len(score_value_list) == 0:
+        score_value = None
     else:
         score_value = stats_output['score_value'][score_value_list[0]]
     
@@ -357,7 +369,7 @@ def plot_score(args, stats_output):
     """plot the skill score from stats_output"""
     x_axis_label = []
     is_all_nan = lambda L: not len(filter(lambda e: not e is numpy.nan, L))
-
+    is_all_none = lambda L: not len(filter(lambda e: not e is None, L))
     fig_width = 10
     fig_hight = 8
 
@@ -388,7 +400,7 @@ def plot_score(args, stats_output):
                                                                       cur_plot_field)
                         score_value_list.append(score_value)
 
-                    if not is_all_nan(score_value_list):
+                    if (not is_all_nan(score_value_list)) and (not is_all_none(score_value_list)):
                         plt.plot(valid_x_index, score_value_list, label='{}\n{}'.format(cur_model, cur_analysis_time_str))
 
                     cur_analysis_time = cur_analysis_time + \

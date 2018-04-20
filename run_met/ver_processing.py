@@ -6,10 +6,11 @@ import os
 
 # map the real model name to the short one
 # (e.g., input: nz8kmN-NCEP, output: NCEP8)
+
 wrfname_map = {
-    'nz8kmN-NCEP': 'NCEP8',
-    'nz8kmN-NCEP-obsnudge': 'NCEP8n',
-    'nz8kmN-NCEP-var': 'NCEP8v',
+    'nz8kmN-NCEP-39': 'NCEP8',
+    'nz8kmN-NCEP-obsnudge-39': 'NCEP8n',
+    'nz8kmN-NCEP-var-39': 'NCEP8v',
     'analysis': 'analysis',
     'background': 'background'
     }
@@ -82,13 +83,33 @@ def read_obs_ascii(obs_ascii_file, fcst_datetime, fcst_var):
     
     return obs_data_list
 
+def get_radar_rainnc_value(cur_radar_path):
+    cur_radar_fid = Dataset(cur_radar_path, 'r')
+    radar_lats = cur_radar_fid.variables['XLAT'][:]
+    radar_lons = cur_radar_fid.variables['XLONG'][:]
+    radar_rainnc = numpy.max(cur_radar_fid.variables['accumulation'][:], 0)
+    return radar_lats, radar_lons, radar_rainnc
 
-def get_model_value(fcst_file,
+def get_model_rainnc_value(pre_fcst_file, cur_fcst_file):
+    cur_fcst_fid = Dataset(cur_fcst_file, 'r')
+    pre_fcst_fid = Dataset(pre_fcst_file, 'r')
+    rainnc_lats = cur_fcst_fid.variables['XLAT'][0,:,:]  # extract/copy the data
+    rainnc_lons = cur_fcst_fid.variables['XLONG'][0,:,:]
+    cur_rainnc = cur_fcst_fid.variables['RAINNC'][0,:,:]
+    pre_rainnc = pre_fcst_fid.variables['RAINNC'][0,:,:]
+    
+    rainnc_lons[rainnc_lons < 0] = 360.0 + rainnc_lons[rainnc_lons < 0]
+    
+    rainnc = cur_rainnc - pre_rainnc
+    
+    return rainnc_lats, rainnc_lons, rainnc
+
+def get_model_conv_value(fcst_file,
                     fcst_var_name,
                     fcst_var_lat_name,
                     fcst_var_lon_name,
                     obs_data_list):
-    '''read and process the netcdf forecast file produced by wrf_interp
+    '''read and process the netcdf forecast file (conv fields) produced by wrf_interp
        (1) it reads the field "fcst_var_name" from "fcst_file"
        (2) go through all the observations corresponding to "fcst_var_name" 
                                     and find the nearest fcst location and value
@@ -188,7 +209,12 @@ def setup_ver(args):
             cur_model_dir = os.path.join(args.pre_download_fcst,
                                               'wp', 
                                               cur_analysis_time.strftime('%y%m%d%H'))
-            ver_out_dir = os.path.join(args.work_dir, wrfname_map[cur_model],
+            try:
+                wrfname_out = wrfname_map[cur_model]
+            except KeyError:
+                wrfname_out = cur_model
+
+            ver_out_dir = os.path.join(args.work_dir, wrfname_out,
                                            'met_dir', 'point_stat',
                                            cur_analysis_time.strftime('%y%m%d%H'))
                 
@@ -202,10 +228,8 @@ def setup_ver(args):
                                                         cur_valid_time.strftime('%Y-%m-%d_%H'))
                 cur_model_path = os.path.join(cur_model_dir, cur_model_filename)
                 
-                mod_obs_ascii_dir = os.path.join(args.work_dir, wrfname_map[cur_model],
-                                                  'mod_obs_ascii',
-                                                  cur_analysis_time.strftime('%y%m%d%H'))
-                cut_met_dir = os.path.join(args.work_dir, wrfname_map[cur_model],
+                # start config point_stat outputs
+                cut_met_dir = os.path.join(args.work_dir, wrfname_out,
                                                   'met_dir', 'point_stat',
                                                   cur_analysis_time.strftime('%y%m%d%H'))
     
@@ -216,17 +240,17 @@ def setup_ver(args):
                                                         cur_valid_time.strftime('%Y%m%d_%H'))
                 
                 cut_cnt_path = os.path.join(cut_met_dir, cut_cnt_filename)
-                cut_mpr_path = os.path.join(cut_met_dir, cut_mpr_filename)    
-                
+                cut_mpr_path = os.path.join(cut_met_dir, cut_mpr_filename)  
+
                 if os.path.exists(cut_cnt_path):
                     os.remove(cut_cnt_path)
 
                 if os.path.exists(cut_mpr_path):
                     os.remove(cut_mpr_path)
-                
+
                 cut_cnt_fid = open(cut_cnt_path, "a")
                 cnt_header = 'MODEL FCST_LEAD FCST_VALID_BEG FCST_VALID_END OBS_VALID_BEG OBS_VALID_END \
-                      FCST_VAR OBS_VAR RMSE RMSE_BCL RMSE_BCU ME ME_BCL ME_BCU MAE MAE_BCL MAE_BCU FCST_THRESH OBS_THRESH \n'
+                      FCST_VAR OBS_VAR RMSE RMSE_BCL RMSE_BCU ME ME_BCL ME_BCU MAE MAE_BCL MAE_BCU CSI FCST_THRESH OBS_THRESH \n'
 
                 cut_mpr_fid = open(cut_mpr_path, "a")
                 mpr_header = 'MODEL FCST_LEAD FCST_VALID_BEG FCST_VALID_END OBS_VALID_BEG OBS_VALID_END \
@@ -234,29 +258,64 @@ def setup_ver(args):
                 
                 cut_cnt_fid.write(cnt_header)
                 cut_mpr_fid.write(mpr_header)
-    
-                if not os.path.exists(mod_obs_ascii_dir):
-                    os.makedirs(mod_obs_ascii_dir)
-                
-                for cur_ver_field in verf_field.keys():
-                    cur_lat_name = verf_field[cur_ver_field]['lat_name']
-                    cur_lon_name = verf_field[cur_ver_field]['lon_name']
-                
-                    obs_data_list = read_obs_ascii(obs_ascii_path, cur_valid_time, cur_ver_field)
-                    
-                    fcst_obs_list = get_model_value(cur_model_path,  cur_ver_field, 
-                                                    cur_lat_name, cur_lon_name,
-                                                    obs_data_list)
-                    mod_obs_ascii_path = os.path.join(mod_obs_ascii_dir,
-                                                      cur_ver_field + '_' + \
-                                                      cur_valid_time.strftime('%y%m%d%H') + '.mod_obs')
-                    write_fcst_obs_list(fcst_obs_list, mod_obs_ascii_path)
-                    
-                    generate_cnt(cut_cnt_fid, cur_model, mod_obs_ascii_path,
-                                 cur_fcst_h, cur_valid_time, cur_ver_field)
+                # ends config point_stat outputs
 
-                    generate_mpr(cut_mpr_fid, cur_model, mod_obs_ascii_path,
-                                 cur_fcst_h, cur_valid_time, cur_ver_field)
+                if args.run_radar_verification:
+                    pre_model_filename = 'wrf_hourly_{}_d0{}_{}:00:00_INTRP'.format(cur_model,
+                                                        args.domain_id,
+                                                        (cur_valid_time - timedelta(seconds=3600)).strftime('%Y-%m-%d_%H'))
+                    pre_model_path = os.path.join(cur_model_dir, pre_model_filename)
+                    
+                    if not os.path.exists(pre_model_path):
+                        continue
+                    model_lats, model_lons, model_rainnc = get_model_rainnc_value(pre_model_path, cur_model_path)
+                    
+                    cur_radar_filename = 'rad2mod_accumulation_{}.nc'.format(cur_valid_time.strftime('%Y%m%d%H%M'))
+                    cur_radar_path = os.path.join(args.pre_download_radar, cur_radar_filename)
+                    
+                    radar_lats, radar_lons, radar_rainnc = get_radar_rainnc_value(cur_radar_path)
+                    
+                    if (not (model_lats == radar_lats).all()) or (not (model_lons ==  radar_lons).all()):
+                        raise Exception('radar verification gets issues !')
+                    
+                    csi = calculate_csi_far(model_rainnc, radar_rainnc, 
+                                            threshold=float(args.radar_verif_thres), 
+                                            scale_the_model=args.scale_the_model)
+                    
+                    generate_cnt(cut_cnt_fid, cur_model,
+                                cur_fcst_h, cur_valid_time, 'RAINNC',
+                                csi=csi, mod_obs_ascii_path=None)
+                
+
+                if args.run_conv_verification:
+                    mod_obs_ascii_dir = os.path.join(args.work_dir, wrfname_out,
+                                                  'mod_obs_ascii',
+                                                  cur_analysis_time.strftime('%y%m%d%H'))  
+    
+                    if not os.path.exists(mod_obs_ascii_dir):
+                        os.makedirs(mod_obs_ascii_dir)
+
+                    # run conv verification
+                    for cur_ver_field in verf_field.keys():
+                        cur_lat_name = verf_field[cur_ver_field]['lat_name']
+                        cur_lon_name = verf_field[cur_ver_field]['lon_name']
+                    
+                        obs_data_list = read_obs_ascii(obs_ascii_path, cur_valid_time, cur_ver_field)
+                    
+                        fcst_obs_list = get_model_conv_value(cur_model_path,  cur_ver_field, 
+                                                        cur_lat_name, cur_lon_name,
+                                                        obs_data_list)
+                        mod_obs_ascii_path = os.path.join(mod_obs_ascii_dir,
+                                                          cur_ver_field + '_' + \
+                                                          cur_valid_time.strftime('%y%m%d%H') + '.mod_obs')
+                        write_fcst_obs_list(fcst_obs_list, mod_obs_ascii_path)
+                    
+                        generate_cnt(cut_cnt_fid, cur_model,
+                                     cur_fcst_h, cur_valid_time, cur_ver_field,
+                                     mod_obs_ascii_path=mod_obs_ascii_path)
+    
+                        generate_mpr(cut_mpr_fid, cur_model, mod_obs_ascii_path,
+                                     cur_fcst_h, cur_valid_time, cur_ver_field)
                 
                 cut_cnt_fid.close()
                 cut_mpr_fid.close()
@@ -294,13 +353,12 @@ def generate_mpr(cur_fid, cur_model, mod_obs_ascii_path,
     
         cur_fid.write(cut_mpr_line)
 
-def generate_cnt(cur_fid, cur_model, mod_obs_ascii_path,
+def generate_cnt(cur_fid, cur_model,
                  cur_fcst_h, cur_valid_time,
-                 cur_fcst_var):
+                 cur_fcst_var,
+                 mod_obs_ascii_path=None,
+                 csi='NA'):
     """generate the cnt file (format is similar to the one produce by MET)"""
-    with open(mod_obs_ascii_path) as f:
-        lines = f.readlines()
-    
     model = cur_model
     fcst_lead = cur_fcst_h
     fcst_valid_beg = cur_valid_time.strftime('%Y%m%d_%H0000')
@@ -309,16 +367,22 @@ def generate_cnt(cur_fid, cur_model, mod_obs_ascii_path,
     obs_valid_end = obs_valid_beg
     fcst_var = cur_fcst_var
     obs_var = cur_fcst_var
-    rmse, rmse_bcl, rmse_bcu = calculate_cnt(lines)
+    
+    rmse = rmse_bcl = rmse_bcu = 'NA'
     me = me_bcl = me_bcu = 'NA'
     mae = mae_bcl = mae_bcu = 'NA'
-    cut_cnt_line = '{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} NA NA\n'.format(model, fcst_lead,
+    if mod_obs_ascii_path:
+        with open(mod_obs_ascii_path) as f:
+            lines = f.readlines()
+        rmse, rmse_bcl, rmse_bcu = calculate_cnt(lines)
+    
+    cut_cnt_line = '{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} NA NA\n'.format(model, fcst_lead,
                         fcst_valid_beg, fcst_valid_end,
                         obs_valid_beg, obs_valid_end,
                         fcst_var, obs_var,
                         rmse, rmse_bcl, rmse_bcu,
                         me, me_bcl, me_bcu,
-                        mae, mae_bcl, mae_bcu)
+                        mae, mae_bcl, mae_bcu, csi)
     
     cur_fid.write(cut_cnt_line)
     
@@ -344,3 +408,34 @@ def calculate_cnt(lines):
     
     return rmse, rmse_bcl, rmse_bcu
 
+
+def calculate_csi_far(model_rainnc, radar_rainnc, threshold=0.2, scale_the_model=False):
+    # http://www.wxonline.info/topics/verif2.html
+    a = 0
+    b = 0
+    c = 0
+    d = 0
+
+    if scale_the_model:
+        max_model_rainnc = numpy.max(model_rainnc)
+        max_radar_rainnc = numpy.max(radar_rainnc)
+        model_index = float(max_radar_rainnc)/max_model_rainnc
+    else:
+        model_index = 1.0
+    
+    model_rainnc = model_rainnc*model_index
+    for i in range(0, model_rainnc.shape[0]):
+        for j in range(0, model_rainnc.shape[1]):
+            if model_rainnc[i,j] >= threshold and radar_rainnc[i,j] >= threshold:
+                a = a + 1
+            elif model_rainnc[i,j] >= threshold and radar_rainnc[i,j] < threshold:
+                b = b + 1
+            elif model_rainnc[i,j] < threshold and radar_rainnc[i,j] >= threshold:
+                c = c + 1
+            elif model_rainnc[i,j] < threshold and radar_rainnc[i,j] < threshold:
+                d = d + 1
+    csi = float(a)/(a + b + c)
+    
+    return csi
+            
+    

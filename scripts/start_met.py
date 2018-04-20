@@ -187,6 +187,16 @@ def setup_parser():
                         help="run point based verification using local codes",action='store_true')
 
     return PARSER.parse_args()
+    '''
+    return PARSER.parse_args(['--start_analysis_time', '201712250000', '--end_analysis_time', '201712250000',
+                              '--analysis_time_interval', '1', '--forecast_length', '8',
+                              '--obsproc_installation', '/home/szhang/programs/WRFDA_V3.9.1/WRFDA/var/obsproc',
+                              '--wrf_interp_installation', '/home/szhang/programs/wrf_interp/wrf_interp',
+                              '--met_installation', '/home/szhang/programs/met-6.0.20170403/met-6.0',
+                              '--work_dir', '/home/szhang/workspace/gsi_exp/met/obs',
+                              '--run_obsproc', '--run_obs2ascii', '--model', 'nz8kmN-NCEP',  '--download_obs'
+                              ])
+    '''
     
     
 def main():
@@ -215,9 +225,10 @@ def main():
             fcst_config_path = \
                 resource_filename('run_met', 
                                   '../../../../run_met/etc/{}.yaml'.format(args.model))
+                
+            #fcst_config_path = '/home/szhang/GitHub_branches/run_met_20180420/etc/nz8kmN-NCEP.yaml'
             if not os.path.exists(fcst_config_path):
                 raise Exception(fcst_config_path + ' does not exist')
-            
             # 1.2.3 run obsproc
             obs_processing.run_obsproc(args, fcst_config_path, 
                                        dir_dict['little_r_dir'], dir_dict['obsproc_dir'])
